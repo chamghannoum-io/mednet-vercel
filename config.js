@@ -5,8 +5,8 @@ const CONFIG = {
     
     // CORS Proxy settings - Vercel serverless functions
     USE_CORS_PROXY: true,
-    CORS_PROXY_UPLOAD_URL: '/api/upload',  
-    CORS_PROXY_RESUME_URL: '/api/resume',
+    CORS_PROXY_UPLOAD_URL: '/upload',  
+    CORS_PROXY_RESUME_URL: '/resume',
     
     // File upload limits
     MAX_FILE_SIZE: 50 * 1024 * 1024, // 50 MB in bytes
