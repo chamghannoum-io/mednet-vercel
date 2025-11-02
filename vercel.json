@@ -1,0 +1,7 @@
+{
+    "version": 2,
+    "rewrites": [
+      { "source": "/", "destination": "/interface.html" },
+      { "source": "/confirmation", "destination": "/confirmation.html" }
+    ]
+  }
