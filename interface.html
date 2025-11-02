@@ -678,7 +678,7 @@
 
                 formData.append('webhookUrl', WEBHOOK_URL);
 
-                const uploadUrl = USE_CORS_PROXY ? CONFIG.CORS_PROXY_UPLOAD_URL : WEBHOOK_URL;
+                const uploadUrl = WEBHOOK_URL;
                 
                 const response = await fetch(uploadUrl, {
                     method: 'POST',
