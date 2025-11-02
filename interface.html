@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedNet - Document Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 300px;
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #16b1b5;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fffe;
+        }
+
+        .upload-area:hover {
+            background: #e6f9f9;
+            border-color: #128e91;
+        }
+
+        .upload-area.dragover {
+            background: #d1f5f5;
+            border-color: #0d6d70;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #16b1b5;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e6f9f9;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #16b1b5 0%, #128e91 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(22, 177, 181, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16b1b5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8fffe;
+            border: 2px solid #16b1b5;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #16b1b5;
+        }
+
+        .result-title {
+            font-size: 24px;
+            color: #128e91;
+            font-weight: 600;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th {
+            background: #16b1b5;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 16px;
+            border: 1px solid #128e91;
+        }
+
+        .data-table th:last-child {
+            border-left: none;
+            border-right: none;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+            border-left: 1px solid #e0e0e0;
+            border-right: none;
+            vertical-align: middle;
+        }
+
+        .data-table td:first-child {
+            border-left: 1px solid #e0e0e0;
+        }
+
+        .data-table td:nth-child(2) {
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .data-table td:last-child {
+            border-right: none !important;
+            border-left: none !important;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #f8fffe;
+        }
+
+        .data-table tr:hover {
+            background: #e6f9f9;
+        }
+
+        .field-name-cell {
+            font-weight: 600;
+            color: #333;
+            text-transform: capitalize;
+            width: 25%;
+        }
+
+        .field-value-cell {
+            width: 40%;
+        }
+
+        .field-image-cell {
+            width: 35%;
+            text-align: center;
+            border-left: none !important;
+            border-right: none !important;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: #16b1b5;
+        }
+
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-field input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .array-field {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .array-tag {
+            background: #16b1b5;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .field-snippet-image {
+            max-width: 100%;
+            max-height: 150px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            transform-origin: center center;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .field-snippet-image:hover {
+            opacity: 0.8;
+        }
+
+        .validation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .validation-modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .modal-icon {
+            font-size: 36px;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            color: #c33;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            color: #555;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            text-align: right;
+        }
+
+        .modal-btn {
+            background: #16b1b5;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            background: #128e91;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .image-modal.show {
+            display: flex;
+        }
+
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+            transition: all 0.3s ease;
+        }
+
+        .image-modal-close:hover {
+            color: #16b1b5;
+            transform: scale(1.2);
+        }
+
+        .document-preview {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .document-preview h3 {
+            color: #128e91;
+            margin-bottom: 20px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #16b1b5;
+            border: 2px solid #16b1b5;
+        }
+
+        .btn-secondary:hover {
+            background: #16b1b5;
+            color: white;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 2px solid #f88;
+            color: #c33;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+        .input-error {
+            border-color: #f44336 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="logo.png" alt="MedNet Logo" class="logo" id="logoImg">
+            <h1 style="color: #16b1b5; font-size: 32px;">Document Processing System</h1>
+            <p style="color: #666; margin-top: 10px;">Upload your medical documents for automated processing</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-subtext">You can select up to 5 documents (10 MB each)</div>
+                <input type="file" id="fileInput" accept="*/*" multiple>
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <strong>Selected files:</strong>
+                <div id="fileList"></div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="btn" id="uploadBtn" disabled>Process Documents</button>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="color: #666; font-size: 18px;">Processing your document...</p>
+            <p style="color: #999; font-size: 14px; margin-top: 10px;">This may take a few moments</p>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <h2 style="color: #128e91; margin-bottom: 30px; font-size: 28px;">Processing Results</h2>
+            <div id="resultsContainer"></div>
+            
+            <div class="success-message" id="successMessage"></div>
+            
+            <div class="action-buttons">
+                <button class="btn" onclick="saveChanges(event)">Save Changes</button>
+                <button class="btn btn-secondary" onclick="exportJSON()">Export JSON</button>
+                <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
+            </div>
+        </div>
+
+        <!-- Validation Modal -->
+        <div class="validation-modal" id="validationModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Required Fields Missing</div>
+                </div>
+                <div class="modal-body" id="modalMessage">
+                    Please fill in all required fields before saving.
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn" onclick="closeValidationModal()">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Enlarge Modal -->
+        <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+            <span class="image-modal-close">&times;</span>
+            <img class="image-modal-content" id="enlargedImage">
+        </div>
+    </div>
+
+    <!-- Load configuration file -->
+    <script src="config.js"></script>
+    
+    <script>
+        // Use configuration from config.js
+        const WEBHOOK_URL = CONFIG.WEBHOOK_URL;
+        const MAX_FILE_SIZE = CONFIG.MAX_FILE_SIZE; 
+        const USE_CORS_PROXY = CONFIG.USE_CORS_PROXY; 
+        const CORS_PROXY_URL = CONFIG.CORS_PROXY_RESUME_URL; 
+
+        let selectedFiles = [];
+        let processedData = null;
+        const REQUIRED_FIELDS = CONFIG.REQUIRED_FIELDS;
+        const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS; 
+        const MAX_FILES = CONFIG.MAX_FILES;
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files);
+            }
+        });
+
+        function handleFileSelect(files) {
+            const fileArray = Array.from(files);
+
+            if (selectedFiles.length + fileArray.length > MAX_FILES) {
+                showError(`You can only upload up to ${MAX_FILES} files total. Currently selected: ${selectedFiles.length}. Trying to add: ${fileArray.length}.`);
+                return;
+            }
+
+            for (let file of fileArray) {
+                if (file.size > MAX_FILE_SIZE) {
+                    showError(`File "${file.name}" exceeds 50 MB limit. Please try a smaller file.`);
+                    return;
+                }
+                const isDuplicate = selectedFiles.some(existingFile => 
+                    existingFile.name === file.name && existingFile.size === file.size
+                );
+                if (!isDuplicate) {
+                    selectedFiles.push(file);
+                }
+            }
+
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.style.marginTop = '5px';
+                fileItem.innerHTML = `${index + 1}. ${file.name} (${formatFileSize(file.size)})`;
+                fileList.appendChild(fileItem);
+            });
+
+            fileInfo.classList.add('show');
+            uploadBtn.disabled = false;
+            hideError();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        uploadBtn.addEventListener('click', uploadFile);
+
+        async function uploadFile() {
+            if (!selectedFiles || selectedFiles.length === 0) return;
+
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('loading').classList.add('show');
+            hideError();
+
+            try {
+                const formData = new FormData();
+                
+                selectedFiles.forEach((file, index) => {
+                    formData.append('file', file);
+                });
+
+                formData.append('webhookUrl', WEBHOOK_URL);
+
+                const uploadUrl = USE_CORS_PROXY ? CONFIG.CORS_PROXY_UPLOAD_URL : WEBHOOK_URL;
+                
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    if (response.status === 413) {
+                        throw new Error('Files are too large for the server. Please try smaller files (recommended: under 10 MB each).');
+                    }
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                processedData = Array.isArray(data) ? data : [data];
+                displayResults(processedData);
+
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('resultsSection').classList.add('show');
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('uploadSection').style.display = 'block';
+                
+                if (error.message === 'Failed to fetch') {
+                    showError('Connection failed. This could be due to:\n\n1. CORS policy blocking the request (most common)\n2. Network connection issue\n3. Webhook URL is incorrect\n\nSolution: Make sure the CORS proxy is running (npm run dev)');
+                } else {
+                    showError('Failed to process documents: ' + error.message);
+                }
+            }
+        }
+
+        function displayResults(dataArray) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            dataArray.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <table class="data-table" id="table-${index}">
+                        <thead>
+                            <tr>
+                                <th>Field Name</th>
+                                <th>Value</th>
+                                <th>Image</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fields-${index}"></tbody>
+                    </table>
+                    ${item.base64_image ? `
+                        <div class="document-preview">
+                            <h3>Document Preview</h3>
+                            <img src="${item.base64_image}" alt="Document" class="preview-image">
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+
+                const fieldsContainer = document.getElementById(`fields-${index}`);
+                renderFields(item, fieldsContainer, index);
+            });
+        }
+
+        function renderFields(data, container, recordIndex) {
+            Object.keys(data).forEach(key => {
+                if (key === 'base64_image' || key === 'resumeUrl' || key.endsWith('_image_snippet')) {
+                    return;
+                }
+
+                const row = document.createElement('tr');
+                
+                const nameCell = document.createElement('td');
+                nameCell.className = 'field-name-cell';
+                nameCell.textContent = key.replace(/_/g, ' ');
+                row.appendChild(nameCell);
+
+                const valueCell = document.createElement('td');
+                valueCell.className = 'field-value-cell';
+
+                const value = data[key];
+
+                if (typeof value === 'boolean') {
+                    const checkboxWrapper = document.createElement('div');
+                    checkboxWrapper.className = 'checkbox-field';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = value;
+                    checkbox.id = `field-${recordIndex}-${key}`;
+                    checkbox.addEventListener('change', (e) => {
+                        processedData[recordIndex][key] = e.target.checked;
+                    });
+
+                    const label = document.createElement('label');
+                    label.textContent = value ? 'Yes' : 'No';
+                    label.style.fontWeight = 'normal';
+
+                    checkboxWrapper.appendChild(checkbox);
+                    checkboxWrapper.appendChild(label);
+                    valueCell.appendChild(checkboxWrapper);
+
+                } else if (Array.isArray(value)) {
+                    const arrayWrapper = document.createElement('div');
+                    arrayWrapper.className = 'array-field';
+                    
+                    const flatValue = value.flat();
+                    
+                    flatValue.forEach(item => {
+                        const tag = document.createElement('span');
+                        tag.className = 'array-tag';
+                        tag.textContent = item;
+                        arrayWrapper.appendChild(tag);
+                    });
+                    valueCell.appendChild(arrayWrapper);
+
+                } else {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'field-input';
+                    input.value = value !== null ? value : '';
+                    input.id = `field-${recordIndex}-${key}`;
+                    
+                    // Handle always-required fields
+                    if (REQUIRED_FIELDS.includes(key)) {
+                        input.required = true;
+                        input.placeholder = 'Required field';
+                        if (!input.value) {
+                            input.classList.add('input-error');
+                        }
+                    }
+                    
+                    // Handle either/or fields (receipt or invoice number)
+                    if (EITHER_OR_FIELDS.includes(key)) {
+                        input.placeholder = 'Receipt or Invoice Number required';
+                    }
+                    
+                    input.addEventListener('input', (e) => {
+                        processedData[recordIndex][key] = e.target.value;
+                        
+                        if (REQUIRED_FIELDS.includes(key)) {
+                            if (!e.target.value.trim()) {
+                                e.target.classList.add('input-error');
+                            } else {
+                                e.target.classList.remove('input-error');
+                            }
+                        }
+                        
+                        if (EITHER_OR_FIELDS.includes(key)) {
+                            validateEitherOrFields(recordIndex);
+                        }
+                    });
+                    
+                    valueCell.appendChild(input);
+                }
+
+                row.appendChild(valueCell);
+
+                const imageCell = document.createElement('td');
+                imageCell.className = 'field-image-cell';
+                
+                const imageSnippetKey = `${key}_image_snippet`;
+                if (data[imageSnippetKey]) {
+                    const snippetImg = document.createElement('img');
+                    const imageSrc = formatBase64Image(data[imageSnippetKey]);
+                    snippetImg.src = imageSrc;
+                    snippetImg.className = 'field-snippet-image';
+                    snippetImg.alt = `${key} snippet`;
+                    snippetImg.onclick = function(e) {
+                        e.stopPropagation();
+                        openImageModal(imageSrc);
+                    };
+                    snippetImg.onerror = function() {
+                        console.error(`Failed to load image for ${key}:`, data[imageSnippetKey].substring(0, 50));
+                        this.style.display = 'none';
+                    };
+                    imageCell.appendChild(snippetImg);
+                }
+
+                row.appendChild(imageCell);
+                container.appendChild(row);
+            });
+        }
+
+        function validateEitherOrFields(recordIndex) {
+            const hasAtLeastOne = EITHER_OR_FIELDS.some(key => {
+                const value = processedData[recordIndex][key];
+                return value && String(value).trim() !== '';
+            });
+
+            EITHER_OR_FIELDS.forEach(key => {
+                const inputEl = document.getElementById(`field-${recordIndex}-${key}`);
+                if (inputEl) {
+                    if (hasAtLeastOne) {
+                        inputEl.classList.remove('input-error');
+                    } else {
+                        inputEl.classList.add('input-error');
+                    }
+                }
+            });
+        }
+
+        function validateRequiredFields() {
+            let hasError = false;
+            const missingMessages = [];
+            const fieldDisplayNames = {
+                receipt_number: 'Receipt Number',
+                invoice_number: 'Invoice Number',
+                claimed_amount: 'Claimed Amount'
+            };
+
+            document.querySelectorAll('.field-input').forEach(el => el.classList.remove('input-error'));
+
+            processedData.forEach((record, recordIndex) => {
+                REQUIRED_FIELDS.forEach(key => {
+                    const value = record[key];
+                    const inputEl = document.getElementById(`field-${recordIndex}-${key}`);
+                    if (value === null || value === undefined || String(value).trim() === '') {
+                        hasError = true;
+                        if (inputEl) {
+                            inputEl.classList.add('input-error');
+                            if (!inputEl.placeholder) inputEl.placeholder = 'Required field';
+                        }
+                        const display = fieldDisplayNames[key] || key.replace(/_/g, ' ');
+                        if (!missingMessages.includes(`${display} is a required field.`)) {
+                            missingMessages.push(`${display} is a required field.`);
+                        }
+                    }
+                });
+
+                const hasEitherOrField = EITHER_OR_FIELDS.some(key => {
+                    const value = record[key];
+                    return value && String(value).trim() !== '';
+                });
+
+                if (!hasEitherOrField) {
+                    hasError = true;
+                    EITHER_OR_FIELDS.forEach(key => {
+                        const inputEl = document.getElementById(`field-${recordIndex}-${key}`);
+                        if (inputEl) {
+                            inputEl.classList.add('input-error');
+                        }
+                    });
+                    if (!missingMessages.includes('Either Receipt Number or Invoice Number is required.')) {
+                        missingMessages.push('Either Receipt Number or Invoice Number is required.');
+                    }
+                }
+            });
+
+            if (hasError) {
+                showValidationModal(missingMessages.join('<br>'));
+            }
+            return !hasError;
+        }
+
+        function showValidationModal(message) {
+            const modal = document.getElementById('validationModal');
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.innerHTML = message;
+            modal.classList.add('show');
+        }
+
+        function closeValidationModal() {
+            const modal = document.getElementById('validationModal');
+            modal.classList.remove('show');
+        }
+
+        function openImageModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const enlargedImage = document.getElementById('enlargedImage');
+            enlargedImage.src = imageSrc;
+            modal.classList.add('show');
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('show');
+        }
+
+        async function saveChanges(event) {
+            if (!processedData || processedData.length === 0) {
+                showError('No data to save');
+                return;
+            }
+
+            if (!validateRequiredFields()) {
+                return;
+            }
+
+            const resumeUrl = processedData[0].resumeUrl;
+            
+            if (!resumeUrl) {
+                showError('No resumeUrl found in the response. Cannot resume workflow.');
+                return;
+            }
+
+            const saveBtn = event.target;
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving & Resuming Workflow...';
+            hideSuccess();
+
+            try {
+                const cleanedData = processedData.map(record => {
+                    const cleaned = {};
+                    Object.keys(record).forEach(key => {
+                        if (!key.endsWith('_image_snippet') && key !== 'resumeUrl' && key !== 'base64_image') {
+                            cleaned[key] = record[key];
+                        }
+                    });
+                    return cleaned;
+                });
+
+                console.log('Sending cleaned data:', cleanedData);
+
+                let response;
+                
+                if (USE_CORS_PROXY) {
+                    response = await fetch(CORS_PROXY_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            resumeUrl: resumeUrl,
+                            data: cleanedData
+                        })
+                    });
+                } else {
+                    response = await fetch(resumeUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(cleanedData)
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Failed to resume workflow: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json().catch(() => ({}));
+
+                showSuccess('Changes saved successfully!');
+                console.log('Workflow resumed with cleaned data:', cleanedData);
+                console.log('Resume response:', result);
+                saveBtn.textContent = 'Saved & Workflow Resumed';
+                saveBtn.style.background = '#4caf50';
+
+                window.location.href = 'confirmation.html';
+
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                
+                let errorMsg = 'Failed to save changes and resume workflow:\n' + error.message;
+                
+                if (error.message === 'Failed to fetch') {
+                    errorMsg += '\n\nThis is a CORS error. Solutions:\n\n';
+                    errorMsg += '1. Add CORS headers to your n8n Wait node response\n';
+                    errorMsg += '2. Run the cors-proxy.js server and set USE_CORS_PROXY = true\n';
+                    errorMsg += '3. Host this HTML on the same domain as n8n';
+                }
+                
+                showError(errorMsg);
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.classList.add('show');
+            hideError();
+        }
+
+        function hideSuccess() {
+            const successDiv = document.getElementById('successMessage');
+            if (successDiv) {
+                successDiv.classList.remove('show');
+            }
+        }
+
+        // Helper function to ensure base64 image has proper data URI format
+        function formatBase64Image(base64String) {
+            if (!base64String) return null;
+            
+            if (base64String.startsWith('data:image')) {
+                return base64String;
+            }
+            
+            if (base64String.startsWith('/9j/') || base64String.startsWith('iVBOR')) {
+                const imageType = base64String.startsWith('/9j/') ? 'jpeg' : 'png';
+                return `data:image/${imageType};base64,${base64String}`;
+            }
+            
+            return `data:image/png;base64,${base64String}`;
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify(processedData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'processed-data.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function processAnother() {
+            selectedFiles = [];
+            processedData = null;
+            fileInput.value = '';
+            document.getElementById('fileList').innerHTML = '';
+            fileInfo.classList.remove('show');
+            uploadBtn.disabled = true;
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('uploadSection').style.display = 'block';
+            hideError();
+            hideSuccess();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
