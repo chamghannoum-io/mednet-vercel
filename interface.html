@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedNet - Document Processor</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=check,content_copy,upload_file" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -66,9 +68,13 @@
         }
 
         .upload-icon {
-            font-size: 48px;
+            font-size: 64px;
             color: #16b1b5;
             margin-bottom: 20px;
+        }
+
+        .upload-icon .material-symbols-outlined {
+            font-size: 64px;
         }
 
         .upload-text {
@@ -283,6 +289,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            align-items: center;
         }
 
         .array-tag {
@@ -292,6 +299,83 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .array-tag-delete {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .array-tag-delete:hover {
+            transform: scale(1.3);
+        }
+
+        .file-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-top: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s ease;
+        }
+
+        .file-list-item:hover {
+            background: #f8fffe;
+            border-color: #16b1b5;
+        }
+
+        .file-list-item-info {
+            flex: 1;
+            color: #333;
+        }
+
+        .file-list-item-remove {
+            cursor: pointer;
+            color: #f44336;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+
+        .file-list-item-remove:hover {
+            background: #ffebee;
+            transform: scale(1.2);
+        }
+
+        .array-add-btn {
+            background: #128e91;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 28px;
+            vertical-align: middle;
+        }
+
+        .array-add-btn:hover {
+            background: #0d6d70;
+            transform: scale(1.1);
         }
 
         .field-snippet-image {
@@ -499,6 +583,231 @@
         .input-error {
             border-color: #f44336 !important;
         }
+
+        .copy-icon {
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 20px;
+            color: #16b1b5;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            user-select: none;
+        }
+
+        .copy-icon:hover {
+            color: #128e91;
+            transform: scale(1.15);
+        }
+
+        .copy-icon:active {
+            transform: scale(0.9);
+        }
+
+        .copy-icon.copied {
+            color: #4caf50;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24;
+        }
+
+        .field-value-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .field-value-wrapper .field-input,
+        .field-value-wrapper .checkbox-field,
+        .field-value-wrapper .array-field {
+            flex: 1;
+        }
+
+        /* Claim Summary Accordion Styles */
+        .btn-view-summary {
+            background: linear-gradient(135deg, #16b1b5 0%, #128e91 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-view-summary:hover {
+            background: linear-gradient(135deg, #128e91 0%, #0d6d70 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(22, 177, 181, 0.4);
+        }
+
+        .btn-view-summary .arrow {
+            transition: transform 0.3s ease;
+            font-size: 18px;
+        }
+
+        .btn-view-summary.expanded .arrow {
+            transform: rotate(180deg);
+        }
+
+        .claim-summary-accordion {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+            opacity: 0;
+            background: #f8fffe;
+            border-radius: 10px;
+            margin-top: 0;
+        }
+
+        .claim-summary-accordion.expanded {
+            max-height: 2000px;
+            opacity: 1;
+            margin-top: 20px;
+            padding: 30px;
+            border: 2px solid #16b1b5;
+        }
+
+        .claim-summary-content {
+            color: #333;
+        }
+
+        .claim-summary-content h2 {
+            color: #16b1b5;
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .claim-summary-content h2:first-child {
+            margin-top: 0;
+        }
+
+        .claim-summary-content h3 {
+            color: #128e91;
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .claim-summary-content p {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .claim-summary-content em {
+            color: #666;
+            font-style: italic;
+        }
+
+        .claim-summary-content strong {
+            color: #128e91;
+            font-weight: 600;
+        }
+
+        .claim-summary-content code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #c33;
+        }
+
+        /* Error Page Styles */
+        .error-page {
+            display: none;
+            background: white;
+            padding: 60px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .error-page.show {
+            display: block;
+        }
+
+        .error-page-icon {
+            font-size: 80px;
+            color: #f44336;
+            margin-bottom: 20px;
+        }
+
+        .error-page-title {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .error-page-subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .error-page-details {
+            background: #fff3f3;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px auto;
+            max-width: 600px;
+            text-align: left;
+        }
+
+        .error-page-details-title {
+            font-weight: 600;
+            color: #c33;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .error-page-details-list {
+            list-style: none;
+            padding: 0;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .error-page-details-list li {
+            padding-left: 20px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .error-page-details-list li:before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .error-page-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
     </style>
 </head>
 <body>
@@ -511,7 +820,9 @@
 
         <div class="upload-section" id="uploadSection">
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📄</div>
+                <div class="upload-icon">
+                    <span class="material-symbols-outlined">upload_file</span>
+                </div>
                 <div class="upload-text">Click to upload or drag and drop</div>
                 <div class="upload-subtext">You can select up to 5 documents (10 MB each)</div>
                 <input type="file" id="fileInput" accept="*/*" multiple>
@@ -522,8 +833,9 @@
                 <div id="fileList"></div>
             </div>
 
-            <div style="text-align: center;">
+            <div style="text-align: center; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" id="uploadBtn" disabled>Process Documents</button>
+                <button class="btn btn-secondary" id="loadMockBtn" style="display: none;">Load Mock Data (Dev Mode)</button>
             </div>
 
             <div class="error-message" id="errorMessage"></div>
@@ -548,6 +860,28 @@
             </div>
         </div>
 
+        <!-- Error Page Section -->
+        <div class="error-page" id="errorPage">
+            <h1 class="error-page-title">Processing Failed</h1>
+            <p class="error-page-subtitle">We couldn't process your document(s). The API returned no data or encountered an error.</p>
+            
+            <div class="error-page-details">
+                <div class="error-page-details-title">Possible Reasons:</div>
+                <ul class="error-page-details-list">
+                    <li>The document format is not supported or couldn't be read</li>
+                    <li>The API service is currently unavailable</li>
+                    <li>Network connection was interrupted</li>
+                    <li>The document contains no extractable data</li>
+                    <li>Server timeout or processing error</li>
+                </ul>
+            </div>
+
+            <div class="error-page-actions">
+                <button class="btn" onclick="retryUpload()">Try Again</button>
+                <button class="btn btn-secondary" onclick="processAnother()">Upload Different Documents</button>
+            </div>
+        </div>
+
         <!-- Validation Modal -->
         <div class="validation-modal" id="validationModal">
             <div class="modal-content">
@@ -568,13 +902,29 @@
             <span class="image-modal-close">&times;</span>
             <img class="image-modal-content" id="enlargedImage">
         </div>
+
+        <!-- Add Array Item Modal -->
+        <div class="validation-modal" id="addArrayModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title" style="color: #128e91;">Add New Item</div>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="newArrayItemInput" class="field-input" placeholder="Enter new item..." style="width: 100%; margin-bottom: 10px;">
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="modal-btn" style="background: #ccc;" onclick="closeAddArrayModal()">Cancel</button>
+                    <button class="modal-btn" id="confirmAddArrayItem">Add</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Load configuration file -->
     <script src="config.js"></script>
     
     <script>
-        // Use configuration from config.js
         const WEBHOOK_URL = CONFIG.WEBHOOK_URL;
         const MAX_FILE_SIZE = CONFIG.MAX_FILE_SIZE; 
         const USE_CORS_PROXY = CONFIG.USE_CORS_PROXY; 
@@ -585,6 +935,65 @@
         const REQUIRED_FIELDS = CONFIG.REQUIRED_FIELDS;
         const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS; 
         const MAX_FILES = CONFIG.MAX_FILES;
+
+        // Development Mode Toggle
+        const DEV_MODE = false; 
+        
+        window.testCodingData = function() {
+            const testData = [{
+                "invoice_number": "INV-TEST",
+                "receipt_number": "REC-TEST",
+                "claimed_amount": 500.00,
+                "documents_attached": ["REIMBURSEMENT_FORM", "INVOICE", "RECEIPT"],
+                "coding": "---\n\n## Primary diagnose\n*Description*: Cervical Myelgia\n*Code*: M54.1\n\n## Secondary diagnose\n*Description*: Severe pain in the backside of neck and left shoulder\n*Code*: M54.9\n\n## Procedures\n### Doctor Consultation + Treatment\n*Code*: 99213\n*Type*: SERVICE",
+                "resumeUrl": "https://test.com/resume"
+            }];
+            
+            console.log('Testing with your exact data structure...');
+            processedData = testData;
+            displayResults(processedData);
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('resultsSection').classList.add('show');
+            console.log('✓ Test data loaded! Check if button appears.');
+        };
+
+        const MOCK_RESPONSE = [
+            {
+                "invoice_number": "INV-2024-001",
+                "receipt_number": "REC-456789",
+                "claimed_amount": 1250.00,
+                "patient_name": "John Doe",
+                "service_date": "2024-01-15",
+                "provider_name": "Dr. Smith Dental Clinic",
+                "diagnosis": "Dental Cavity",
+                "treatment": "Filling - Composite Resin",
+                "docs_attached": ["Receipt", "Invoice", "Medical Report"],
+                "resumeUrl": "https://n8n-test.iohealth.com/webhook/resume-123",
+                
+                "coding": "## Primary diagnose\n*Description*: Arrested dental caries\n*Code*: K02.5\n\n## Procedures\n### Resin-based composite - one surface, posterior\n*Code*: D2391\n*Type*: DENTAL\n*Fee*: $250.00\n\n### Examination and diagnosis\n*Code*: D0120\n*Type*: PREVENTIVE\n*Fee*: $85.00",
+                
+                "invoice_number_image_snippet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "claimed_amount_image_snippet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "base64_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+            },
+            {
+                "invoice_number": "INV-2024-002",
+                "receipt_number": "REC-789012",
+                "claimed_amount": 3500.00,
+                "patient_name": "Jane Smith",
+                "service_date": "2024-01-20",
+                "provider_name": "City Medical Center",
+                "diagnosis": "Acute bronchitis",
+                "treatment": "Consultation and medication",
+                "docs_attached": ["Invoice", "Prescription"],
+                "resumeUrl": "https://n8n-test.iohealth.com/webhook/resume-456",
+                
+                "coding": "## Primary diagnose\n*Description*: Acute bronchitis\n*Code*: J20.9\n\n## Procedures\n### Office visit - established patient\n*Code*: 99213\n*Type*: CONSULTATION\n*Fee*: $150.00\n\n### Prescription medication\n*Code*: J3490\n*Type*: MEDICATION\n*Fee*: $85.00",
+                
+                "invoice_number_image_snippet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "claimed_amount_image_snippet": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+            }
+        ];
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -640,18 +1049,54 @@
                 }
             }
 
+            updateFileList();
+            hideError();
+        }
+
+        function updateFileList() {
             const fileList = document.getElementById('fileList');
+            const fileInfoContainer = document.getElementById('fileInfo');
             fileList.innerHTML = '';
+            
+            if (selectedFiles.length === 0) {
+                fileInfoContainer.classList.remove('show');
+                uploadBtn.disabled = true;
+                return;
+            }
+            
             selectedFiles.forEach((file, index) => {
                 const fileItem = document.createElement('div');
-                fileItem.style.marginTop = '5px';
-                fileItem.innerHTML = `${index + 1}. ${file.name} (${formatFileSize(file.size)})`;
+                fileItem.className = 'file-list-item';
+                
+                const fileInfoText = document.createElement('div');
+                fileInfoText.className = 'file-list-item-info';
+                fileInfoText.textContent = `${index + 1}. ${file.name} (${formatFileSize(file.size)})`;
+                
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'file-list-item-remove';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove file';
+                removeBtn.addEventListener('click', () => removeFile(index));
+                
+                fileItem.appendChild(fileInfoText);
+                fileItem.appendChild(removeBtn);
                 fileList.appendChild(fileItem);
             });
 
-            fileInfo.classList.add('show');
+            fileInfoContainer.classList.add('show');
             uploadBtn.disabled = false;
-            hideError();
+        }
+
+        function removeFile(index) {
+            if (index >= 0 && index < selectedFiles.length) {
+                const removedFile = selectedFiles[index];
+                selectedFiles.splice(index, 1);
+                console.log(`Removed file: ${removedFile.name}`);
+                
+                fileInput.value = '';
+                
+                updateFileList();
+            }
         }
 
         function formatFileSize(bytes) {
@@ -662,8 +1107,50 @@
 
         uploadBtn.addEventListener('click', uploadFile);
 
+        if (DEV_MODE) {
+            const loadMockBtn = document.getElementById('loadMockBtn');
+            loadMockBtn.style.display = 'inline-block';
+            loadMockBtn.addEventListener('click', loadMockData);
+            
+            const header = document.querySelector('.header p');
+            if (header) {
+                header.innerHTML += ' <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 10px;">DEV MODE</span>';
+            }
+        }
+
+        function loadMockData() {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('errorPage').classList.remove('show');
+            document.getElementById('loading').classList.add('show');
+            hideError();
+
+            setTimeout(() => {
+                processedData = JSON.parse(JSON.stringify(MOCK_RESPONSE)); 
+                
+                if (!processedData || processedData.length === 0) {
+                    console.error('Mock data is empty');
+                    document.getElementById('loading').classList.remove('show');
+                    showErrorPage();
+                    return;
+                }
+                
+                displayResults(processedData);
+                
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('resultsSection').classList.add('show');
+                
+                console.log('Mock data loaded:', processedData);
+            }, 1000);
+        }
+
         async function uploadFile() {
             if (!selectedFiles || selectedFiles.length === 0) return;
+
+            if (DEV_MODE && selectedFiles.length > 0) {
+                console.log('DEV MODE: Using mock data instead of uploading');
+                loadMockData();
+                return;
+            }
 
             document.getElementById('uploadSection').style.display = 'none';
             document.getElementById('loading').classList.add('show');
@@ -694,6 +1181,64 @@
 
                 const data = await response.json();
                 processedData = Array.isArray(data) ? data : [data];
+                
+                processedData = processedData.map(record => {
+                    if (record.coding) {
+                        const codingType = typeof record.coding;
+                        console.log('Original coding type:', codingType);
+                        console.log('Original coding value:', record.coding);
+                        console.log('Is Array?', Array.isArray(record.coding));
+                        
+                        if (codingType === 'object' && record.coding !== null) {
+                            if (Array.isArray(record.coding)) {
+                                console.log('Coding is an array with', record.coding.length, 'items');
+                                record.coding = record.coding.join('\n');
+                                console.log('Converted array to string');
+                            } 
+                            else if (record.coding.value) {
+                                console.log('Coding has .value property');
+                                record.coding = record.coding.value;
+                            }
+                            else if (record.coding.text) {
+                                console.log('Coding has .text property');
+                                record.coding = record.coding.text;
+                            }
+                            else if (record.coding.content) {
+                                console.log('Coding has .content property');
+                                record.coding = record.coding.content;
+                            }
+                            else {
+                                console.log('Converting object to JSON string');
+                                record.coding = JSON.stringify(record.coding, null, 2);
+                            }
+                        }
+                        
+                        console.log('Final coding type:', typeof record.coding);
+                        console.log('Final coding length:', record.coding?.length);
+                    }
+                    return record;
+                });
+                
+                console.log('=== RECEIVED DATA FROM WEBHOOK ===');
+                console.log('Full response:', data);
+                console.log('Processed data length:', processedData.length);
+                console.log('First record keys:', processedData[0] ? Object.keys(processedData[0]) : 'N/A');
+                console.log('Coding field value:', processedData[0]?.coding);
+                console.log('Coding field type:', typeof processedData[0]?.coding);
+                console.log('Coding field length:', processedData[0]?.coding?.length);
+                console.log('Has coding field?', (processedData[0]?.coding && typeof processedData[0]?.coding === 'string' && processedData[0].coding.trim().length > 0) ? 'YES' : 'NO');
+                if (processedData[0]?.coding && typeof processedData[0]?.coding === 'string' && processedData[0].coding.trim().length > 0) {
+                    console.log('Coding content preview:', processedData[0].coding.substring(0, 100));
+                }
+                console.log('===================================');
+                
+                if (!processedData || processedData.length === 0 || !processedData[0] || Object.keys(processedData[0]).length === 0) {
+                    console.error('API returned empty or invalid data');
+                    document.getElementById('loading').classList.remove('show');
+                    showErrorPage();
+                    return;
+                }
+                
                 displayResults(processedData);
 
                 document.getElementById('loading').classList.remove('show');
@@ -702,12 +1247,16 @@
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('loading').classList.remove('show');
-                document.getElementById('uploadSection').style.display = 'block';
                 
-                if (error.message === 'Failed to fetch') {
-                    showError('Connection failed. This could be due to:\n\n1. CORS policy blocking the request (most common)\n2. Network connection issue\n3. Webhook URL is incorrect\n\nSolution: Make sure the CORS proxy is running (npm run dev)');
+                if (error.message === 'Failed to fetch' || error.message.includes('Server error')) {
+                    showErrorPage();
                 } else {
-                    showError('Failed to process documents: ' + error.message);
+                    document.getElementById('uploadSection').style.display = 'block';
+                    if (error.message === 'Failed to fetch') {
+                        showError('Connection failed. This could be due to:\n\n1. CORS policy blocking the request (most common)\n2. Network connection issue\n3. Webhook URL is incorrect\n\nSolution: Make sure the CORS proxy is running (npm run dev)');
+                    } else {
+                        showError('Failed to process documents: ' + error.message);
+                    }
                 }
             }
         }
@@ -715,21 +1264,52 @@
         function displayResults(dataArray) {
             const container = document.getElementById('resultsContainer');
             container.innerHTML = '';
+            
+            Object.keys(summaryOpenedState).forEach(key => delete summaryOpenedState[key]);
 
             dataArray.forEach((item, index) => {
+                const hasCoding = item.coding && typeof item.coding === 'string' && item.coding.trim().length > 0;
+                
+                console.log(`Record ${index + 1}:`, {
+                    hasCoding: hasCoding,
+                    codingExists: !!item.coding,
+                    codingType: typeof item.coding,
+                    codingLength: item.coding ? item.coding.length : 0,
+                    codingTrimmedLength: item.coding ? item.coding.trim().length : 0,
+                    allKeys: Object.keys(item)
+                });
+                
                 const card = document.createElement('div');
                 card.className = 'result-card';
+                
                 card.innerHTML = `
-                    <table class="data-table" id="table-${index}">
-                        <thead>
-                            <tr>
-                                <th>Field Name</th>
-                                <th>Value</th>
-                                <th>Image</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fields-${index}"></tbody>
-                    </table>
+                    <button class="btn-view-summary" id="fields-btn-${index}" onclick="toggleFieldsAccordion(${index})">
+                        <span>View Extracted Information</span>
+                        <span class="arrow">▼</span>
+                    </button>
+                    <div class="claim-summary-accordion" id="fields-accordion-${index}">
+                        <table class="data-table" id="table-${index}">
+                            <thead>
+                                <tr>
+                                    <th>Field Name</th>
+                                    <th>Value</th>
+                                    <th>Image</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fields-${index}"></tbody>
+                        </table>
+                    </div>
+                    ${hasCoding ? `
+                        <button class="btn-view-summary" id="summary-btn-${index}" onclick="toggleSummaryAccordion(${index})">
+                            <span>View Claim Summary</span>
+                            <span class="arrow">▼</span>
+                        </button>
+                        <div class="claim-summary-accordion" id="summary-accordion-${index}">
+                            <div class="claim-summary-content" id="accordion-content-${index}">
+                                <!-- Markdown content will be inserted here -->
+                            </div>
+                        </div>
+                    ` : ''}
                     ${item.base64_image ? `
                         <div class="document-preview">
                             <h3>Document Preview</h3>
@@ -741,12 +1321,39 @@
 
                 const fieldsContainer = document.getElementById(`fields-${index}`);
                 renderFields(item, fieldsContainer, index);
+                
+                if (hasCoding) {
+                    const contentDiv = document.getElementById(`accordion-content-${index}`);
+                    if (contentDiv) {
+                        const htmlContent = marked.parse(item.coding.trim());
+                        contentDiv.innerHTML = htmlContent;
+                        console.log(`Claim summary accordion created for Record ${index + 1}`);
+                    }
+                } else {
+                    console.log(`No coding field found for Record ${index + 1} - accordion will not appear`);
+                    if (item.coding) {
+                        console.log(`   Coding field exists but is empty or invalid. Length: ${item.coding.length}, Trimmed: ${item.coding.trim().length}`);
+                    }
+                }
+                
+                if (index === 0) {
+                    const fieldsAccordion = document.getElementById(`fields-accordion-${index}`);
+                    const fieldsButton = document.getElementById(`fields-btn-${index}`);
+                    if (fieldsAccordion && fieldsButton) {
+                        fieldsAccordion.classList.add('expanded');
+                        fieldsButton.classList.add('expanded');
+                        console.log('Auto-opened extracted info for first record');
+                    }
+                }
             });
         }
 
         function renderFields(data, container, recordIndex) {
+            console.log('Rendering fields for record', recordIndex, '- Total fields:', Object.keys(data).length);
+            
             Object.keys(data).forEach(key => {
-                if (key === 'base64_image' || key === 'resumeUrl' || key.endsWith('_image_snippet')) {
+                if (key === 'base64_image' || key === 'resumeUrl' || key === 'coding' || key.endsWith('_image_snippet')) {
+                    console.log(`  Skipping field: ${key}`);
                     return;
                 }
 
@@ -763,6 +1370,9 @@
                 const value = data[key];
 
                 if (typeof value === 'boolean') {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'field-value-wrapper';
+                    
                     const checkboxWrapper = document.createElement('div');
                     checkboxWrapper.className = 'checkbox-field';
                     
@@ -772,6 +1382,7 @@
                     checkbox.id = `field-${recordIndex}-${key}`;
                     checkbox.addEventListener('change', (e) => {
                         processedData[recordIndex][key] = e.target.checked;
+                        label.textContent = e.target.checked ? 'Yes' : 'No';
                     });
 
                     const label = document.createElement('label');
@@ -780,30 +1391,94 @@
 
                     checkboxWrapper.appendChild(checkbox);
                     checkboxWrapper.appendChild(label);
-                    valueCell.appendChild(checkboxWrapper);
+                    wrapper.appendChild(checkboxWrapper);
+                    
+                    const copyIcon = document.createElement('span');
+                    copyIcon.className = 'copy-icon material-symbols-outlined';
+                    copyIcon.textContent = 'content_copy';
+                    copyIcon.title = 'Copy to clipboard';
+                    copyIcon.addEventListener('click', () => {
+                        copyToClipboard(checkbox.checked ? 'Yes' : 'No', copyIcon);
+                    });
+                    wrapper.appendChild(copyIcon);
+                    
+                    valueCell.appendChild(wrapper);
 
                 } else if (Array.isArray(value)) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'field-value-wrapper';
+                    
                     const arrayWrapper = document.createElement('div');
                     arrayWrapper.className = 'array-field';
+                    arrayWrapper.id = `array-${recordIndex}-${key}`;
+                
+                    if (processedData[recordIndex][key].some(item => Array.isArray(item))) {
+                        processedData[recordIndex][key] = processedData[recordIndex][key].flat();
+                    }
                     
-                    const flatValue = value.flat();
+                    const renderArray = () => {
+                        arrayWrapper.innerHTML = '';
+                        const currentArray = processedData[recordIndex][key];
+                        
+                        currentArray.forEach((item, itemIndex) => {
+                            const tag = document.createElement('span');
+                            tag.className = 'array-tag';
+                            
+                            const tagText = document.createElement('span');
+                            tagText.textContent = item;
+                            tag.appendChild(tagText);
+                            
+                            const deleteBtn = document.createElement('span');
+                            deleteBtn.className = 'array-tag-delete';
+                            deleteBtn.textContent = '×';
+                            deleteBtn.title = 'Remove item';
+                            deleteBtn.addEventListener('click', () => {
+                                processedData[recordIndex][key].splice(itemIndex, 1);
+                                renderArray();
+                            });
+                            tag.appendChild(deleteBtn);
+                            
+                            arrayWrapper.appendChild(tag);
+                        });
+                        
+                        const addBtn = document.createElement('span');
+                        addBtn.className = 'array-add-btn';
+                        addBtn.textContent = '+';
+                        addBtn.title = 'Add new item';
+                        addBtn.addEventListener('click', () => {
+                            openAddArrayModal((newItem) => {
+                                processedData[recordIndex][key].push(newItem);
+                                renderArray();
+                            });
+                        });
+                        arrayWrapper.appendChild(addBtn);
+                    };
                     
-                    flatValue.forEach(item => {
-                        const tag = document.createElement('span');
-                        tag.className = 'array-tag';
-                        tag.textContent = item;
-                        arrayWrapper.appendChild(tag);
+                    renderArray();
+                    wrapper.appendChild(arrayWrapper);
+                    
+                    const copyIcon = document.createElement('span');
+                    copyIcon.className = 'copy-icon material-symbols-outlined';
+                    copyIcon.textContent = 'content_copy';
+                    copyIcon.title = 'Copy to clipboard';
+                    copyIcon.addEventListener('click', () => {
+                        const currentArray = processedData[recordIndex][key];
+                        copyToClipboard(currentArray.join(', '), copyIcon);
                     });
-                    valueCell.appendChild(arrayWrapper);
+                    wrapper.appendChild(copyIcon);
+                    
+                    valueCell.appendChild(wrapper);
 
                 } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'field-value-wrapper';
+                    
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.className = 'field-input';
                     input.value = value !== null ? value : '';
                     input.id = `field-${recordIndex}-${key}`;
                     
-                    // Handle always-required fields
                     if (REQUIRED_FIELDS.includes(key)) {
                         input.required = true;
                         input.placeholder = 'Required field';
@@ -812,7 +1487,6 @@
                         }
                     }
                     
-                    // Handle either/or fields (receipt or invoice number)
                     if (EITHER_OR_FIELDS.includes(key)) {
                         input.placeholder = 'Receipt or Invoice Number required';
                     }
@@ -833,7 +1507,18 @@
                         }
                     });
                     
-                    valueCell.appendChild(input);
+                    wrapper.appendChild(input);
+                    
+                    const copyIcon = document.createElement('span');
+                    copyIcon.className = 'copy-icon material-symbols-outlined';
+                    copyIcon.textContent = 'content_copy';
+                    copyIcon.title = 'Copy to clipboard';
+                    copyIcon.addEventListener('click', () => {
+                        copyToClipboard(input.value, copyIcon);
+                    });
+                    wrapper.appendChild(copyIcon);
+                    
+                    valueCell.appendChild(wrapper);
                 }
 
                 row.appendChild(valueCell);
@@ -959,6 +1644,112 @@
             modal.classList.remove('show');
         }
 
+        let addArrayCallback = null;
+
+        function openAddArrayModal(callback) {
+            const modal = document.getElementById('addArrayModal');
+            const input = document.getElementById('newArrayItemInput');
+            input.value = '';
+            modal.classList.add('show');
+            addArrayCallback = callback;
+            
+            setTimeout(() => input.focus(), 100);
+            
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmAddArrayItem();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeAddArrayModal();
+                }
+            };
+        }
+
+        function closeAddArrayModal() {
+            const modal = document.getElementById('addArrayModal');
+            modal.classList.remove('show');
+            addArrayCallback = null;
+        }
+
+        function confirmAddArrayItem() {
+            const input = document.getElementById('newArrayItemInput');
+            const value = input.value.trim();
+            
+            if (value && addArrayCallback) {
+                addArrayCallback(value);
+            }
+            
+            closeAddArrayModal();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const confirmBtn = document.getElementById('confirmAddArrayItem');
+            if (confirmBtn) {
+                confirmBtn.onclick = confirmAddArrayItem;
+            }
+        });
+
+        const summaryOpenedState = {};
+
+        function toggleFieldsAccordion(recordIndex) {
+            const accordion = document.getElementById(`fields-accordion-${recordIndex}`);
+            const button = document.getElementById(`fields-btn-${recordIndex}`);
+            
+            if (!accordion || !button) {
+                console.error('Fields accordion elements not found for record', recordIndex);
+                return;
+            }
+            
+            const isExpanded = accordion.classList.contains('expanded');
+            
+            if (isExpanded) {
+                accordion.classList.remove('expanded');
+                button.classList.remove('expanded');
+                console.log('Fields accordion closed for record', recordIndex);
+            } else {
+                accordion.classList.add('expanded');
+                button.classList.add('expanded');
+                console.log('Fields accordion opened for record', recordIndex);
+            }
+        }
+
+        function toggleSummaryAccordion(recordIndex) {
+            const accordion = document.getElementById(`summary-accordion-${recordIndex}`);
+            const button = document.getElementById(`summary-btn-${recordIndex}`);
+            
+            if (!accordion || !button) {
+                console.error('Summary accordion elements not found for record', recordIndex);
+                return;
+            }
+            
+            const isExpanded = accordion.classList.contains('expanded');
+            
+            if (isExpanded) {
+                accordion.classList.remove('expanded');
+                button.classList.remove('expanded');
+                console.log('Summary accordion closed for record', recordIndex);
+            } else {
+                if (!summaryOpenedState[recordIndex]) {
+                    const fieldsAccordion = document.getElementById(`fields-accordion-${recordIndex}`);
+                    const fieldsButton = document.getElementById(`fields-btn-${recordIndex}`);
+                    if (fieldsAccordion && fieldsButton) {
+                        fieldsAccordion.classList.remove('expanded');
+                        fieldsButton.classList.remove('expanded');
+                        console.log('First time opening summary - closed fields accordion');
+                    }
+                    summaryOpenedState[recordIndex] = true;
+                }
+                
+                accordion.classList.add('expanded');
+                button.classList.add('expanded');
+                console.log('Summary accordion opened for record', recordIndex);
+            }
+        }
+
+        window.toggleFieldsAccordion = toggleFieldsAccordion;
+        window.toggleSummaryAccordion = toggleSummaryAccordion;
+
         async function saveChanges(event) {
             if (!processedData || processedData.length === 0) {
                 showError('No data to save');
@@ -981,6 +1772,31 @@
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving & Resuming Workflow...';
             hideSuccess();
+
+            if (DEV_MODE) {
+                console.log('DEV MODE: Simulating save (not actually calling API)');
+                
+                const cleanedData = processedData.map(record => {
+                    const cleaned = {};
+                    Object.keys(record).forEach(key => {
+                        if (!key.endsWith('_image_snippet') && key !== 'resumeUrl' && key !== 'base64_image') {
+                            cleaned[key] = record[key];
+                        }
+                    });
+                    return cleaned;
+                });
+                
+                console.log('Would send this data:', cleanedData);
+                
+                setTimeout(() => {
+                    showSuccess('Changes saved successfully! (Dev Mode - No actual API call)');
+                    saveBtn.textContent = 'Saved (Dev Mode)';
+                    saveBtn.style.background = '#4caf50';
+                    console.log('Mock save completed');
+                }, 1000);
+                
+                return;
+            }
 
             try {
                 const cleanedData = processedData.map(record => {
@@ -1095,13 +1911,29 @@
             selectedFiles = [];
             processedData = null;
             fileInput.value = '';
-            document.getElementById('fileList').innerHTML = '';
-            fileInfo.classList.remove('show');
-            uploadBtn.disabled = true;
+            updateFileList();
             document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('errorPage').classList.remove('show');
             document.getElementById('uploadSection').style.display = 'block';
             hideError();
             hideSuccess();
+        }
+
+        function showErrorPage() {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('errorPage').classList.add('show');
+            console.log('Error page displayed');
+        }
+
+        function retryUpload() {
+            if (selectedFiles && selectedFiles.length > 0) {
+                console.log('Retrying upload with existing files...');
+                uploadFile();
+            } else {
+                processAnother();
+            }
         }
 
         function showError(message) {
@@ -1112,6 +1944,42 @@
 
         function hideError() {
             document.getElementById('errorMessage').classList.remove('show');
+        }
+
+        async function copyToClipboard(text, iconElement) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                const originalIcon = iconElement.textContent;
+                iconElement.textContent = 'check';
+                iconElement.classList.add('copied');
+                
+                setTimeout(() => {
+                    iconElement.textContent = originalIcon;
+                    iconElement.classList.remove('copied');
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    const originalIcon = iconElement.textContent;
+                    iconElement.textContent = 'check';
+                    iconElement.classList.add('copied');
+                    setTimeout(() => {
+                        iconElement.textContent = originalIcon;
+                        iconElement.classList.remove('copied');
+                    }, 1500);
+                } catch (err2) {
+                    console.error('Fallback copy failed:', err2);
+                }
+                document.body.removeChild(textarea);
+            }
         }
     </script>
 </body>
