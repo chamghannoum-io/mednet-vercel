@@ -6,7 +6,7 @@ HTML interface for uploading medical documents to n8n, with editable field valid
 
 ### 1. Configure the Application
 
-Edit `config.js` with your webhook URL and settings:
+Edit `config.js` with your n8n webhook URL and settings:
 ```javascript
 const CONFIG = {
     WEBHOOK_URL: 'https://your-n8n-instance.com/webhook/your-webhook-id',
@@ -121,8 +121,8 @@ The system now supports receiving medical coding data asynchronously after the i
 #### Frontend Behavior
 1. **First Request**: User uploads documents → n8n "Respond to Webhook" returns extracted info (without coding)
 2. **Loading State**: "View Claim Summary" button shows "Loading Claim Summary..." with spinning animation
-3. **Polling**: Frontend polls `GET /coding/latest` every 1 second for up to 60 seconds
-4. **n8n Sends Coding**: n8n HTTP Request node POSTs coding data to `/coding` endpoint
+3. **Polling**: Frontend polls `GET /coding/latest` every 1 second for up to 2 minutes (120 seconds)
+4. **n8n Sends Coding**: n8n HTTP Request node POSTs coding data to `/coding` endpoint (separate one-way request)
 5. **Update UI**: Frontend polling detects the data, button becomes active, displays formatted medical coding
 
 #### n8n Workflow Setup
@@ -144,9 +144,9 @@ The system now supports receiving medical coding data asynchronously after the i
 
 **Node 3: HTTP Request** (Send to Backend)
 - **Method**: POST
-- **URL**: `http://YOUR_IP:3002/coding` (use your machine's IP, not localhost!)
-  - Example: `http://192.168.1.100:3002/coding`
-  - Or if n8n in Docker: `http://host.docker.internal:3002/coding`
+- **URL**: 
+  - **Production**: `https://mednet-afqz.onrender.com/coding`
+  - **Local Dev**: `http://YOUR_IP:3002/coding` or `http://host.docker.internal:3002/coding`
 - **Headers**: `Content-Type: application/json`
 - **Body**:
 ```json
@@ -181,6 +181,27 @@ curl -X POST http://localhost:3002/coding \
 ```
 
 **Option 3: Use Your n8n Workflow**
-- Configure HTTP Request node with your machine's IP address
+- Configure HTTP Request node URL:
+  - Production: `https://mednet-afqz.onrender.com/coding`
+  - Local: Your machine's IP address (e.g., `http://192.168.1.100:3002/coding`)
 - Upload documents and watch the loading animation
 - Coding should appear automatically after a few seconds
+
+---
+
+## Deployment
+
+### Deploying to Render
+
+This app is configured to run on Render.com:
+
+**Production URL**: https://mednet-afqz.onrender.com
+
+**n8n Configuration for Production**:
+- HTTP Request node URL: `https://mednet-afqz.onrender.com/coding`
+- Make sure your n8n instance can reach the public internet
+
+**Build Command**: `npm install`
+**Start Command**: `npm start`
+
+The server will automatically use `process.env.PORT` (Render sets this automatically).

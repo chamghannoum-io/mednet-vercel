@@ -1297,7 +1297,7 @@
             console.log('n8n should POST to /coding endpoint via HTTP Request node');
             
             let pollCount = 0;
-            const maxPolls = 60; // Poll for 60 seconds (every 1 second)
+            const maxPolls = 120; // Poll for 120 seconds / 2 minutes (every 1 second)
             let dotsCount = 0;
             
             codingPollInterval = setInterval(async () => {
@@ -1347,7 +1347,7 @@
                 }
                 
                 if (pollCount >= maxPolls) {
-                    console.log('Stopped polling - max time reached (60 seconds)');
+                    console.log('Stopped polling - max time reached (120 seconds)');
                     clearInterval(codingPollInterval);
                     codingPollInterval = null;
                     waitingForCoding = false;
