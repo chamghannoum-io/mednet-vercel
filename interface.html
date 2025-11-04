@@ -1332,40 +1332,31 @@
 
                 const result = await response.json();
                 console.log('✅ Received claim summary response:', result);
-
-                // Handle array or object response from n8n
-                // n8n might return: [{ coding: "..." }] or { coding: "...", resumeURL: "..." }
-                let dataObject = result;
-                if (Array.isArray(result) && result.length > 0) {
-                    dataObject = result[0];
-                    console.log('📋 Extracted first element from array:', dataObject);
-                }
-
-                // Extract claim summary and resumeURL2 from response
-                const coding = dataObject.coding;
-                const newResumeURL = dataObject.resumeURL || dataObject.resumeUrl;
-
+                
+                // Debug: log the full result structure
                 console.log('📊 Extracted data:', {
-                    hasCoding: !!coding,
-                    codingLength: coding?.length,
-                    hasResumeURL: !!newResumeURL
+                    coding: result.coding || result.data?.coding || result[0]?.coding,
+                    codingLength: (result.coding || result.data?.coding || result[0]?.coding)?.length,
+                    hasCoding: !!(result.coding || result.data?.coding || result[0]?.coding),
+                    resumeURL: result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl,
+                    hasResumeURL: !!(result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl)
                 });
 
+                const coding = result.coding || result.data?.coding || result[0]?.coding;
+                const newResumeURL = result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl;
+
                 if (coding) {
-                    // Store coding in processedData
                     processedData[0].coding = coding;
                     console.log('✓ Claim summary received');
                 }
 
                 if (newResumeURL) {
-                    // Store resumeURL2 for the final save action
                     resumeURL2 = newResumeURL;
                     console.log('✓ ResumeURL2 received:', resumeURL2);
                 } else {
-                    console.warn('⚠️ No resumeURL2 found in response - will use original resumeUrl');
+                    console.warn('No resumeURL2 found in response - will use original resumeUrl');
                 }
 
-                // Update the UI to show claim summary
                 updateCodingDisplay();
 
             } catch (error) {
@@ -1408,6 +1399,12 @@
                 existingSummaryBtn.style.opacity = '1';
                 existingSummaryBtn.style.cursor = 'pointer';
                 existingSummaryBtn.onclick = () => toggleSummaryAccordion(0);
+                
+                // Remove the display:none style from the accordion
+                const accordion = document.getElementById('summary-accordion-0');
+                if (accordion) {
+                    accordion.style.display = '';
+                }
                 
                 const contentDiv = document.getElementById('accordion-content-0');
                 if (contentDiv) {
