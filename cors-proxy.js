@@ -80,14 +80,11 @@ app.post('/resume', async (req, res) => {
         });
 
         const result = await response.json().catch(() => ({}));
-        
+
         console.log('n8n response:', result);
-        
-        res.json({
-            success: true,
-            status: response.status,
-            data: result
-        });
+
+        // Return n8n response directly (same as /upload endpoint for consistency)
+        res.status(response.status).json(result);
 
     } catch (error) {
         console.error('Proxy error:', error);

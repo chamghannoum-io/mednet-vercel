@@ -1333,10 +1333,23 @@
                 const result = await response.json();
                 console.log('✅ Received claim summary response:', result);
 
+                // Handle array or object response from n8n
+                // n8n might return: [{ coding: "..." }] or { coding: "...", resumeURL: "..." }
+                let dataObject = result;
+                if (Array.isArray(result) && result.length > 0) {
+                    dataObject = result[0];
+                    console.log('📋 Extracted first element from array:', dataObject);
+                }
+
                 // Extract claim summary and resumeURL2 from response
-                // Handle different response structures
-                const coding = result.coding || result.data?.coding || result[0]?.coding;
-                const newResumeURL = result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl;
+                const coding = dataObject.coding;
+                const newResumeURL = dataObject.resumeURL || dataObject.resumeUrl;
+
+                console.log('📊 Extracted data:', {
+                    hasCoding: !!coding,
+                    codingLength: coding?.length,
+                    hasResumeURL: !!newResumeURL
+                });
 
                 if (coding) {
                     // Store coding in processedData
