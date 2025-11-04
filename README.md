@@ -64,18 +64,9 @@ All configuration is centralized in `config.js`:
 
 ## How It Works
 
-### Basic Flow
-1. User uploads medical document
-2. File sent to n8n webhook for processing
-3. n8n extracts data and returns JSON with `resumeUrl`
-4. Interface displays editable fields
-5. User corrects any errors
-6. Clicks "Save Changes" → data sent to `resumeUrl`
-7. n8n workflow resumes with corrected data
+### Multi-Step Workflow with resumeURL
 
-### Two-Payload System (Async Coding)
-
-The system now supports receiving medical coding data asynchronously after the initial document extraction:
+The system uses n8n's resumeURL feature to create a multi-step workflow that pauses and resumes at key points:
 
 ```
 ┌─────────┐          ┌─────────┐          ┌─────────┐
@@ -83,76 +74,125 @@ The system now supports receiving medical coding data asynchronously after the i
 │ Browser │          │ Server  │          │ Workflow│
 └────┬────┘          └────┬────┘          └────┬────┘
      │                    │                     │
+     │ STEP 1: Upload & Extract                │
+     │ ─────────────────────────────────────── │
      │ 1. Upload Files    │                     │
      ├───────────────────>│                     │
      │                    │ 2. Forward to n8n   │
      │                    ├────────────────────>│
      │                    │                     │ 3. Extract data
-     │                    │                     │ 4. Respond to Webhook
-     │                    │ 5. Extracted data   │    (returns immediately)
+     │                    │                     │ 4. Wait Node 1
+     │                    │ 5. Extracted data   │ 5. Respond to Webhook
+     │                    │    + resumeURL1     │    (returns immediately)
      │                    │<────────────────────┤
-     │ 6. Display Data    │                     │ 7. Continue workflow
-     │    + Loading Button│                     │    Generate coding...
+     │ 6. Display Data    │                     │
      │<───────────────────┤                     │
      │                    │                     │
-     │ 8. Poll /coding    │                     │
+     │ STEP 2: Fetch Claim Summary             │
+     │ ─────────────────────────────────────── │
+     │ 7. Call resumeURL1 │                     │
      ├───────────────────>│                     │
-     │ (404 - not ready)  │                     │
+     │                    │ 8. Forward to n8n   │
+     │                    ├────────────────────>│
+     │                    │                     │ 9. Resume workflow
+     │                    │                     │ 10. Generate coding
+     │                    │                     │ 11. Wait Node 2
+     │                    │ 12. Claim summary   │ 12. Respond to Webhook
+     │                    │     + resumeURL2    │
+     │                    │<────────────────────┤
+     │ 13. Display summary│                     │
      │<───────────────────┤                     │
      │                    │                     │
-     │ 9. Poll again...   │                     │
+     │ STEP 3: Save Confirmation               │
+     │ ─────────────────────────────────────── │
+     │ 14. User edits     │                     │
+     │     & clicks Save  │                     │
+     │ 15. Call resumeURL2│                     │
      ├───────────────────>│                     │
-     │ (404 - not ready)  │                     │ 10. Coding ready!
-     │<───────────────────┤                     │
-     │                    │                     │ 11. HTTP Request
-     │                    │ 12. POST /coding    │     sends to backend
-     │                    │    (coding data)    │
+     │                    │ 16. Forward to n8n  │
+     │                    ├────────────────────>│
+     │                    │                     │ 17. Resume workflow
+     │                    │                     │ 18. Send email
+     │                    │ 19. Success         │ 19. Complete
      │                    │<────────────────────┤
-     │                    │ 13. Store in memory │
-     │ 14. Poll /coding   │                     │
-     ├───────────────────>│                     │
-     │ 15. Return coding  │                     │
+     │ 20. Show success   │                     │
      │<───────────────────┤                     │
-     │ 16. Display coding │                     │
-     │     button active! │                     │
      └────────────────────┴─────────────────────┘
 ```
 
 #### Frontend Behavior
-1. **First Request**: User uploads documents → n8n "Respond to Webhook" returns extracted info (without coding)
-2. **Loading State**: "View Claim Summary" button shows "Loading Claim Summary..." with spinning animation
-3. **Polling**: Frontend polls `GET /coding/latest` every 1 second for up to 2 minutes (120 seconds)
-4. **n8n Sends Coding**: n8n HTTP Request node POSTs coding data to `/coding` endpoint (separate one-way request)
-5. **Update UI**: Frontend polling detects the data, button becomes active, displays formatted medical coding
+1. **Initial Call**: User uploads documents → n8n returns extracted info + **resumeURL1**
+2. **Immediate Second Call**: Frontend automatically calls **resumeURL1** to trigger claim summary generation
+3. **Loading State**: "View Claim Summary" button shows "Loading Claim Summary..." during processing
+4. **Display Summary**: Once received, button becomes active and displays claim summary + **resumeURL2**
+5. **User Confirmation**: User reviews, edits data, and clicks "Save Changes"
+6. **Final Call**: Frontend calls **resumeURL2** to complete the workflow and trigger email
 
 #### n8n Workflow Setup
 
-**Node 1: Respond to Webhook**
-- Returns extracted data immediately
-- Does NOT include coding field
+The n8n workflow should follow this structure:
+
+**Step 1: Initial Document Processing**
+```
+Webhook (Initial)
+  → Code in JavaScript
+  → Extract from File
+  → Aggregate
+  → Get Document Fields
+  → Respond to Webhook
+      Response Body:
+      {
+        "invoice_number": "{{ $json.invoice_number }}",
+        "claimed_amount": {{ $json.claimed_amount }},
+        "resumeURL": "{{ $execution.resumeUrl }}"
+      }
+  → Wait Node 1 (Resume: On webhook call)
+```
+
+**Step 2: Claim Summary Generation**
+```
+  → Coding (AI/LLM to generate medical coding)
+  → Respond to Webhook
+      Response Body:
+      {
+        "success": true,
+        "coding": "{{ $json.coding }}",
+        "resumeURL": "{{ $execution.resumeUrl }}"
+      }
+  → Wait Node 2 (Resume: On webhook call)
+```
+
+**Step 3: Final Processing**
+```
+  → UniqueID
+  → HTML
+  → Send a message (email with results)
+  → End
+```
+
+**Key Configuration Points:**
+- Each **Wait Node** should be set to **"Resume: On webhook call"**
+- Each **Respond to Webhook** should include `{{ $execution.resumeUrl }}` in the response
+- All processing happens within n8n nodes - no external HTTP requests needed
+
+**Example Response Formats:**
+
+*Response 1 (Extracted Info + resumeURL1):*
 ```json
 {
   "invoice_number": "INV-123",
   "claimed_amount": 500.00,
-  "resumeUrl": "https://n8n-test.iohealth.com/webhook/resume-abc123"
+  "patient_name": "John Doe",
+  "resumeURL": "https://n8n-test.iohealth.com/webhook/abc123..."
 }
 ```
 
-**Node 2: Generate Coding**
-- Workflow continues after responding
-- Run AI/LLM to generate medical coding (~5 seconds)
-
-**Node 3: HTTP Request** (Send to Backend)
-- **Method**: POST
-- **URL**: 
-  - **Production**: `https://mednet-afqz.onrender.com/coding`
-  - **Local Dev**: `http://YOUR_IP:3002/coding` or `http://host.docker.internal:3002/coding`
-- **Headers**: `Content-Type: application/json`
-- **Body**:
+*Response 2 (Claim Summary + resumeURL2):*
 ```json
 {
-  "coding": "{{ $json.coding }}",
-  "sessionId": "latest"
+  "success": true,
+  "coding": "## Primary diagnose\n*Description*: Dental Caries\n*Code*: K02.5",
+  "resumeURL": "https://n8n-test.iohealth.com/webhook/xyz789..."
 }
 ```
 
@@ -160,32 +200,16 @@ The system now supports receiving medical coding data asynchronously after the i
 
 | Endpoint | Method | Purpose | From |
 |----------|--------|---------|------|
-| `/upload` | POST | Upload documents to n8n | Frontend |
-| `/resume` | POST | Save edited data to n8n | Frontend |
-| `/coding` | POST | **Receive coding from n8n** | **n8n HTTP Request** |
-| `/coding/:sessionId` | GET | Poll for coding data | Frontend |
+| `/upload` | POST | Upload documents to n8n webhook | Frontend |
+| `/resume` | POST | Resume workflow with data (handles both resumeURL1 and resumeURL2) | Frontend |
 
-#### Testing the Two-Payload System
+#### Testing the Multi-Step Workflow
 
-**Option 1: Browser Console (Easiest)**
-```javascript
-// Simulate n8n sending coding data
-testSecondPayload()
-```
-
-**Option 2: Manual API Call (Simulates n8n)**
-```bash
-curl -X POST http://localhost:3002/coding \
-  -H "Content-Type: application/json" \
-  -d '{"coding": "---\n\n## Primary diagnose\n*Description*: Test\n*Code*: K02.5", "sessionId": "latest"}'
-```
-
-**Option 3: Use Your n8n Workflow**
-- Configure HTTP Request node URL:
-  - Production: `https://mednet-afqz.onrender.com/coding`
-  - Local: Your machine's IP address (e.g., `http://192.168.1.100:3002/coding`)
-- Upload documents and watch the loading animation
-- Coding should appear automatically after a few seconds
+1. **Upload a document** through the interface
+2. **View extracted info** - Should appear immediately
+3. **Wait for claim summary** - Loading button should automatically fetch and display
+4. **Edit fields if needed**
+5. **Click "Save Changes"** - Triggers final workflow completion and email
 
 ---
 
@@ -198,8 +222,9 @@ This app is configured to run on Render.com:
 **Production URL**: https://mednet-afqz.onrender.com
 
 **n8n Configuration for Production**:
-- HTTP Request node URL: `https://mednet-afqz.onrender.com/coding`
-- Make sure your n8n instance can reach the public internet
+- Set your n8n webhook URL in `config.js` to point to your n8n instance
+- The workflow will use n8n's built-in `{{ $execution.resumeUrl }}` for pausing/resuming
+- No additional configuration needed - resumeURLs are automatically generated by n8n
 
 **Build Command**: `npm install`
 **Start Command**: `npm start`

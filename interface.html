@@ -937,10 +937,9 @@
 
         let selectedFiles = [];
         let processedData = null;
-        let waitingForCoding = false;
-        let codingPollInterval = null;
+        let resumeURL2 = null; // Store resumeURL2 for final save
         const REQUIRED_FIELDS = CONFIG.REQUIRED_FIELDS;
-        const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS; 
+        const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS;
         const MAX_FILES = CONFIG.MAX_FILES;
 
         // Development Mode Toggle
@@ -1251,26 +1250,29 @@
                     console.log('Coding content preview:', processedData[0].coding.substring(0, 100));
                 }
                 console.log('===================================');
-                
+
                 if (!processedData || processedData.length === 0 || !processedData[0] || Object.keys(processedData[0]).length === 0) {
                     console.error('API returned empty or invalid data');
                     document.getElementById('loading').classList.remove('show');
                     showErrorPage();
                     return;
                 }
-                
-                // Check if coding is missing - if so, we'll wait for it
-                const hasCoding = processedData[0]?.coding && typeof processedData[0]?.coding === 'string' && processedData[0].coding.trim().length > 0;
-                if (!hasCoding && processedData[0]?.resumeUrl) {
-                    console.log('No coding found in first payload - waiting for second payload...');
-                    waitingForCoding = true;
-                    startPollingForCoding();
-                }
-                
+
+                // Display initial extraction results
                 displayResults(processedData);
 
                 document.getElementById('loading').classList.remove('show');
                 document.getElementById('resultsSection').classList.add('show');
+
+                // Step 2: Immediately call resumeURL1 to get claim summary
+                const resumeURL1 = processedData[0]?.resumeURL || processedData[0]?.resumeUrl;
+                if (resumeURL1) {
+                    console.log('📌 ResumeURL1 found, calling it to fetch claim summary...');
+                    // Call resumeURL1 asynchronously (don't await - let it load in background)
+                    fetchClaimSummary(resumeURL1);
+                } else {
+                    console.warn('⚠️ No resumeURL found in response - cannot fetch claim summary');
+                }
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1289,109 +1291,88 @@
             }
         }
 
-        // Function to start polling for the second payload (coding data)
-        // n8n will POST coding to /coding endpoint via HTTP Request node
-        // Frontend polls /coding/latest to check if data has arrived
-        function startPollingForCoding() {
-            console.log('Waiting for coding data from n8n...');
-            console.log('n8n should POST to /coding endpoint via HTTP Request node');
-            
-            let pollCount = 0;
-            const maxPolls = 120; // Poll for 120 seconds / 2 minutes (every 1 second)
-            let dotsCount = 0;
-            
-            codingPollInterval = setInterval(async () => {
-                pollCount++;
-                
-                // Update loading animation every cycle
-                dotsCount = (dotsCount + 1) % 4;
-                const summaryBtn = document.getElementById('summary-btn-0');
-                if (summaryBtn && waitingForCoding) {
-                    const dots = '.'.repeat(dotsCount);
-                    const textSpan = summaryBtn.querySelector('span:first-child');
-                    if (textSpan) {
-                        textSpan.textContent = `Loading Claim Summary${dots}`;
-                    }
-                }
-                
-                // Check backend for coding data every 1 second (every 4th cycle at 250ms)
-                if (pollCount % 4 === 0) {
-                    try {
-                        const checkUrl = USE_CORS_PROXY ? '/coding/latest' : `${CONFIG.CORS_PROXY_CODING_URL}/latest`;
-                        const response = await fetch(checkUrl);
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.success && data.coding) {
-                                console.log('✅ Coding data arrived from n8n!');
-                                console.log('Coding data:', data.coding);
-                                
-                                // Merge the coding into processedData
-                                if (processedData && processedData[0]) {
-                                    processedData[0].coding = data.coding;
-                                    
-                                    clearInterval(codingPollInterval);
-                                    codingPollInterval = null;
-                                    waitingForCoding = false;
-                                    
-                                    updateCodingDisplay();
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        // Expected 404 while waiting for n8n to send data
-                        if (pollCount % 20 === 0) {
-                            console.log(`Still waiting for coding data... (${Math.floor(pollCount / 4)}s elapsed)`);
-                        }
-                    }
-                }
-                
-                if (pollCount >= maxPolls) {
-                    console.log('Stopped polling - max time reached (120 seconds)');
-                    clearInterval(codingPollInterval);
-                    codingPollInterval = null;
-                    waitingForCoding = false;
-                    
-                    const btn = document.getElementById('summary-btn-0');
-                    if (btn) {
-                        btn.classList.remove('loading');
-                        btn.innerHTML = `
-                            <span>Coding Not Available (Timeout)</span>
-                            <span class="arrow">✕</span>
-                        `;
-                        btn.disabled = true;
-                        btn.style.opacity = '0.5';
-                        btn.style.cursor = 'not-allowed';
-                    }
-                }
-            }, 250); 
-        }
+        // Function to fetch claim summary by calling resumeURL1
+        async function fetchClaimSummary(resumeURL1) {
+            console.log('📞 Calling resumeURL1 to trigger claim summary generation...');
 
-        window.receiveCodingPayload = function(codingData) {
-            console.log('📨 Received coding payload via direct call:', codingData);
-            
-            if (!processedData || !processedData[0]) {
-                console.error('No processedData to merge coding into');
-                return;
-            }
-            
-            const coding = codingData[0]?.coding || codingData.coding;
-            
-            if (coding) {
-                processedData[0].coding = coding;
-                console.log('Merged coding into processedData via direct call');
-                
-                if (codingPollInterval) {
-                    clearInterval(codingPollInterval);
-                    codingPollInterval = null;
+            try {
+                // Show loading state
+                const summaryBtn = document.getElementById('summary-btn-0');
+                if (summaryBtn) {
+                    summaryBtn.classList.add('loading');
+                    summaryBtn.innerHTML = `
+                        <span>Loading Claim Summary...</span>
+                        <span class="arrow">⟳</span>
+                    `;
+                    summaryBtn.disabled = true;
                 }
-                waitingForCoding = false;
-                
+
+                // Call resumeURL1 (either through proxy or direct)
+                let response;
+                if (USE_CORS_PROXY) {
+                    response = await fetch(CORS_PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            resumeUrl: resumeURL1,
+                            data: {}
+                        })
+                    });
+                } else {
+                    response = await fetch(resumeURL1, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch claim summary: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Received claim summary response:', result);
+
+                // Extract claim summary and resumeURL2 from response
+                // Handle different response structures
+                const coding = result.coding || result.data?.coding || result[0]?.coding;
+                const newResumeURL = result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl;
+
+                if (coding) {
+                    // Store coding in processedData
+                    processedData[0].coding = coding;
+                    console.log('✓ Claim summary received');
+                }
+
+                if (newResumeURL) {
+                    // Store resumeURL2 for the final save action
+                    resumeURL2 = newResumeURL;
+                    console.log('✓ ResumeURL2 received:', resumeURL2);
+                } else {
+                    console.warn('⚠️ No resumeURL2 found in response - will use original resumeUrl');
+                }
+
+                // Update the UI to show claim summary
                 updateCodingDisplay();
-            } else {
-                console.error('No coding field found in payload');
+
+            } catch (error) {
+                console.error('Error fetching claim summary:', error);
+
+                const btn = document.getElementById('summary-btn-0');
+                if (btn) {
+                    btn.classList.remove('loading');
+                    btn.innerHTML = `
+                        <span>Failed to Load Claim Summary</span>
+                        <span class="arrow">✕</span>
+                    `;
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                }
+
+                showError('Failed to load claim summary: ' + error.message);
             }
-        };
+        }
 
         function updateCodingDisplay() {
             console.log('Updating coding display...');
@@ -1492,9 +1473,9 @@
                                 <!-- Markdown content will be inserted here -->
                             </div>
                         </div>
-                    ` : waitingForCoding ? `
+                    ` : `
                         <button class="btn-view-summary loading" id="summary-btn-${index}" disabled style="opacity: 0.7; cursor: wait;">
-                            <span>Loading Claim Summary.</span>
+                            <span>Loading Claim Summary...</span>
                             <span class="arrow">⟳</span>
                         </button>
                         <div class="claim-summary-accordion" id="summary-accordion-${index}" style="display: none;">
@@ -1502,7 +1483,7 @@
                                 <!-- Content will be inserted when coding arrives -->
                             </div>
                         </div>
-                    ` : ''}
+                    `}
                     ${item.base64_image ? `
                         <div class="document-preview">
                             <h3>Document Preview</h3>
@@ -1953,12 +1934,16 @@
                 return;
             }
 
-            const resumeUrl = processedData[0].resumeUrl;
-            
-            if (!resumeUrl) {
+            // Use resumeURL2 (from claim summary response) if available, otherwise fall back to original resumeUrl
+            const finalResumeUrl = resumeURL2 || processedData[0].resumeUrl;
+
+            if (!finalResumeUrl) {
                 showError('No resumeUrl found in the response. Cannot resume workflow.');
                 return;
             }
+
+            console.log('🚀 Saving changes with resumeURL:', finalResumeUrl);
+            console.log('   Using resumeURL2?', !!resumeURL2);
 
             const saveBtn = event.target;
             const originalText = saveBtn.textContent;
@@ -2013,12 +1998,12 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            resumeUrl: resumeUrl,
+                            resumeUrl: finalResumeUrl,
                             data: cleanedData
                         })
                     });
                 } else {
-                    response = await fetch(resumeUrl, {
+                    response = await fetch(finalResumeUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2103,14 +2088,8 @@
         function processAnother() {
             selectedFiles = [];
             processedData = null;
-            
-            // Clean up polling if it's running
-            if (codingPollInterval) {
-                clearInterval(codingPollInterval);
-                codingPollInterval = null;
-            }
-            waitingForCoding = false;
-            
+            resumeURL2 = null; // Reset resumeURL2
+
             fileInput.value = '';
             updateFileList();
             document.getElementById('resultsSection').classList.remove('show');

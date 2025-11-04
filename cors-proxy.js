@@ -9,10 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 const upload = multer();
 
-// In-memory storage for coding data (temporary solution)
-// In production, consider using Redis or a database
-const codingDataStore = new Map();
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
@@ -102,81 +98,12 @@ app.post('/resume', async (req, res) => {
     }
 });
 
-// Endpoint for n8n to send coding data (second payload)
-app.post('/coding', async (req, res) => {
-    try {
-        const { coding, sessionId } = req.body;
-        
-        console.log('📨 Received coding data from n8n');
-        console.log('Session ID:', sessionId || 'default');
-        console.log('Coding length:', coding?.length || 0);
-        
-        // Store the coding data with sessionId (or use 'latest' as default)
-        const id = sessionId || 'latest';
-        codingDataStore.set(id, {
-            coding: coding,
-            timestamp: Date.now()
-        });
-        
-        // Clean up old entries (older than 5 minutes)
-        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-        for (const [key, value] of codingDataStore.entries()) {
-            if (value.timestamp < fiveMinutesAgo) {
-                codingDataStore.delete(key);
-            }
-        }
-        
-        res.json({
-            success: true,
-            message: 'Coding data received and stored'
-        });
-        
-    } catch (error) {
-        console.error('Coding endpoint error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-// Endpoint for frontend to check if coding data is available
-app.get('/coding/:sessionId?', (req, res) => {
-    try {
-        const sessionId = req.params.sessionId || 'latest';
-        const codingData = codingDataStore.get(sessionId);
-        
-        if (codingData) {
-            console.log('✓ Coding data found for session:', sessionId);
-            // Delete after retrieval to prevent duplicate reads
-            codingDataStore.delete(sessionId);
-            
-            res.json({
-                success: true,
-                coding: codingData.coding
-            });
-        } else {
-            res.status(404).json({
-                success: false,
-                message: 'No coding data available yet'
-            });
-        }
-        
-    } catch (error) {
-        console.error('Coding retrieval error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'CORS proxy is running' });
 });
 
 app.listen(PORT, () => {
     console.log(`✓ CORS Proxy Server running on port ${PORT}`);
-    console.log(`✓ Coding endpoint: POST http://localhost:${PORT}/coding`);
-    console.log(`✓ Frontend can check: GET http://localhost:${PORT}/coding/:sessionId`);
+    console.log(`✓ Upload endpoint: POST http://localhost:${PORT}/upload`);
+    console.log(`✓ Resume endpoint: POST http://localhost:${PORT}/resume`);
 });
