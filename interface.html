@@ -153,6 +153,11 @@
             100% { transform: rotate(360deg); }
         }
 
+        .btn-view-summary.loading .arrow {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
         .results-section {
             display: none;
             background: white;
@@ -932,6 +937,8 @@
 
         let selectedFiles = [];
         let processedData = null;
+        let waitingForCoding = false;
+        let codingPollInterval = null;
         const REQUIRED_FIELDS = CONFIG.REQUIRED_FIELDS;
         const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS; 
         const MAX_FILES = CONFIG.MAX_FILES;
@@ -955,6 +962,19 @@
             document.getElementById('uploadSection').style.display = 'none';
             document.getElementById('resultsSection').classList.add('show');
             console.log('✓ Test data loaded! Check if button appears.');
+        };
+
+        // Test function to simulate receiving the second payload (coding data)
+        // Usage in browser console: testSecondPayload()
+        window.testSecondPayload = function() {
+            console.log('Testing second payload arrival...');
+            
+            const mockCodingPayload = [{
+                "coding": "---\n\n## Primary diagnose\n*Description*: Arrested dental caries\n*Code*: K02.5\n\n## Procedures\n### resin-based composite - one surface, posterior\n*Code*: D2391\n*Type*: DENTAL"
+            }];
+            
+            window.receiveCodingPayload(mockCodingPayload);
+            console.log('Second payload simulated! Check if the View Claim Summary button is now active.');
         };
 
         const MOCK_RESPONSE = [
@@ -1239,6 +1259,14 @@
                     return;
                 }
                 
+                // Check if coding is missing - if so, we'll wait for it
+                const hasCoding = processedData[0]?.coding && typeof processedData[0]?.coding === 'string' && processedData[0].coding.trim().length > 0;
+                if (!hasCoding && processedData[0]?.resumeUrl) {
+                    console.log('No coding found in first payload - waiting for second payload...');
+                    waitingForCoding = true;
+                    startPollingForCoding();
+                }
+                
                 displayResults(processedData);
 
                 document.getElementById('loading').classList.remove('show');
@@ -1256,6 +1284,161 @@
                         showError('Connection failed. This could be due to:\n\n1. CORS policy blocking the request (most common)\n2. Network connection issue\n3. Webhook URL is incorrect\n\nSolution: Make sure the CORS proxy is running (npm run dev)');
                     } else {
                         showError('Failed to process documents: ' + error.message);
+                    }
+                }
+            }
+        }
+
+        // Function to start polling for the second payload (coding data)
+        // n8n will POST coding to /coding endpoint via HTTP Request node
+        // Frontend polls /coding/latest to check if data has arrived
+        function startPollingForCoding() {
+            console.log('Waiting for coding data from n8n...');
+            console.log('n8n should POST to /coding endpoint via HTTP Request node');
+            
+            let pollCount = 0;
+            const maxPolls = 60; // Poll for 60 seconds (every 1 second)
+            let dotsCount = 0;
+            
+            codingPollInterval = setInterval(async () => {
+                pollCount++;
+                
+                // Update loading animation every cycle
+                dotsCount = (dotsCount + 1) % 4;
+                const summaryBtn = document.getElementById('summary-btn-0');
+                if (summaryBtn && waitingForCoding) {
+                    const dots = '.'.repeat(dotsCount);
+                    const textSpan = summaryBtn.querySelector('span:first-child');
+                    if (textSpan) {
+                        textSpan.textContent = `Loading Claim Summary${dots}`;
+                    }
+                }
+                
+                // Check backend for coding data every 1 second (every 4th cycle at 250ms)
+                if (pollCount % 4 === 0) {
+                    try {
+                        const checkUrl = USE_CORS_PROXY ? '/coding/latest' : `${CONFIG.CORS_PROXY_CODING_URL}/latest`;
+                        const response = await fetch(checkUrl);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success && data.coding) {
+                                console.log('✅ Coding data arrived from n8n!');
+                                console.log('Coding data:', data.coding);
+                                
+                                // Merge the coding into processedData
+                                if (processedData && processedData[0]) {
+                                    processedData[0].coding = data.coding;
+                                    
+                                    clearInterval(codingPollInterval);
+                                    codingPollInterval = null;
+                                    waitingForCoding = false;
+                                    
+                                    updateCodingDisplay();
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        // Expected 404 while waiting for n8n to send data
+                        if (pollCount % 20 === 0) {
+                            console.log(`Still waiting for coding data... (${Math.floor(pollCount / 4)}s elapsed)`);
+                        }
+                    }
+                }
+                
+                if (pollCount >= maxPolls) {
+                    console.log('Stopped polling - max time reached (60 seconds)');
+                    clearInterval(codingPollInterval);
+                    codingPollInterval = null;
+                    waitingForCoding = false;
+                    
+                    const btn = document.getElementById('summary-btn-0');
+                    if (btn) {
+                        btn.classList.remove('loading');
+                        btn.innerHTML = `
+                            <span>Coding Not Available (Timeout)</span>
+                            <span class="arrow">✕</span>
+                        `;
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                        btn.style.cursor = 'not-allowed';
+                    }
+                }
+            }, 250); 
+        }
+
+        window.receiveCodingPayload = function(codingData) {
+            console.log('📨 Received coding payload via direct call:', codingData);
+            
+            if (!processedData || !processedData[0]) {
+                console.error('No processedData to merge coding into');
+                return;
+            }
+            
+            const coding = codingData[0]?.coding || codingData.coding;
+            
+            if (coding) {
+                processedData[0].coding = coding;
+                console.log('Merged coding into processedData via direct call');
+                
+                if (codingPollInterval) {
+                    clearInterval(codingPollInterval);
+                    codingPollInterval = null;
+                }
+                waitingForCoding = false;
+                
+                updateCodingDisplay();
+            } else {
+                console.error('No coding field found in payload');
+            }
+        };
+
+        function updateCodingDisplay() {
+            console.log('Updating coding display...');
+            
+            const hasCoding = processedData[0].coding && typeof processedData[0].coding === 'string' && processedData[0].coding.trim().length > 0;
+            
+            if (!hasCoding) {
+                console.error('No valid coding to display');
+                return;
+            }
+            
+            const existingSummaryBtn = document.getElementById('summary-btn-0');
+            if (existingSummaryBtn) {
+                existingSummaryBtn.classList.remove('loading');
+                existingSummaryBtn.innerHTML = `
+                    <span>View Claim Summary</span>
+                    <span class="arrow">▼</span>
+                `;
+                existingSummaryBtn.disabled = false;
+                existingSummaryBtn.style.opacity = '1';
+                existingSummaryBtn.style.cursor = 'pointer';
+                existingSummaryBtn.onclick = () => toggleSummaryAccordion(0);
+                
+                const contentDiv = document.getElementById('accordion-content-0');
+                if (contentDiv) {
+                    const htmlContent = marked.parse(processedData[0].coding.trim());
+                    contentDiv.innerHTML = htmlContent;
+                    console.log('Claim summary content updated!');
+                }
+            } else {
+                const card = document.querySelector('.result-card');
+                if (card) {
+                    const fieldsAccordion = document.getElementById('fields-accordion-0');
+                    if (fieldsAccordion) {
+                        const summaryHtml = `
+                            <button class="btn-view-summary" id="summary-btn-0" onclick="toggleSummaryAccordion(0)">
+                                <span>View Claim Summary</span>
+                                <span class="arrow">▼</span>
+                            </button>
+                            <div class="claim-summary-accordion" id="summary-accordion-0">
+                                <div class="claim-summary-content" id="accordion-content-0">
+                                    ${marked.parse(processedData[0].coding.trim())}
+                                </div>
+                            </div>
+                        `;
+                        fieldsAccordion.insertAdjacentHTML('afterend', summaryHtml);
+                        console.log('Claim summary section created!');
                     }
                 }
             }
@@ -1307,6 +1490,16 @@
                         <div class="claim-summary-accordion" id="summary-accordion-${index}">
                             <div class="claim-summary-content" id="accordion-content-${index}">
                                 <!-- Markdown content will be inserted here -->
+                            </div>
+                        </div>
+                    ` : waitingForCoding ? `
+                        <button class="btn-view-summary loading" id="summary-btn-${index}" disabled style="opacity: 0.7; cursor: wait;">
+                            <span>Loading Claim Summary.</span>
+                            <span class="arrow">⟳</span>
+                        </button>
+                        <div class="claim-summary-accordion" id="summary-accordion-${index}" style="display: none;">
+                            <div class="claim-summary-content" id="accordion-content-${index}">
+                                <!-- Content will be inserted when coding arrives -->
                             </div>
                         </div>
                     ` : ''}
@@ -1910,6 +2103,14 @@
         function processAnother() {
             selectedFiles = [];
             processedData = null;
+            
+            // Clean up polling if it's running
+            if (codingPollInterval) {
+                clearInterval(codingPollInterval);
+                codingPollInterval = null;
+            }
+            waitingForCoding = false;
+            
             fileInput.value = '';
             updateFileList();
             document.getElementById('resultsSection').classList.remove('show');
