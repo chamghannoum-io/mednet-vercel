@@ -941,6 +941,20 @@
         const REQUIRED_FIELDS = CONFIG.REQUIRED_FIELDS;
         const EITHER_OR_FIELDS = CONFIG.EITHER_OR_FIELDS;
         const MAX_FILES = CONFIG.MAX_FILES;
+        
+        // Fields that should NOT be editable
+        const NON_EDITABLE_FIELDS = [
+            'gender',
+            'card_number',
+            'policy_number',
+            'diagnosis',
+            'provider',
+            'physician_name',
+            'receipt_number',
+            'invoice_number',
+            'physician_signature',
+            'physician_stamp'
+        ];
 
         // Development Mode Toggle
         const DEV_MODE = false; 
@@ -1267,11 +1281,11 @@
                 // Step 2: Immediately call resumeURL1 to get claim summary
                 const resumeURL1 = processedData[0]?.resumeURL || processedData[0]?.resumeUrl;
                 if (resumeURL1) {
-                    console.log('📌 ResumeURL1 found, calling it to fetch claim summary...');
+                    console.log(' ResumeURL1 found, calling it to fetch claim summary...');
                     // Call resumeURL1 asynchronously (don't await - let it load in background)
                     fetchClaimSummary(resumeURL1);
                 } else {
-                    console.warn('⚠️ No resumeURL found in response - cannot fetch claim summary');
+                    console.warn(' No resumeURL found in response - cannot fetch claim summary');
                 }
 
             } catch (error) {
@@ -1293,7 +1307,7 @@
 
         // Function to fetch claim summary by calling resumeURL1
         async function fetchClaimSummary(resumeURL1) {
-            console.log('📞 Calling resumeURL1 to trigger claim summary generation...');
+            console.log(' Calling resumeURL1 to trigger claim summary generation...');
 
             try {
                 // Show loading state
@@ -1331,10 +1345,10 @@
                 }
 
                 const result = await response.json();
-                console.log('✅ Received claim summary response:', result);
+                console.log(' Received claim summary response:', result);
                 
                 // Debug: log the full result structure
-                console.log('📊 Extracted data:', {
+                console.log(' Extracted data:', {
                     coding: result.coding || result.data?.coding || result[0]?.coding,
                     codingLength: (result.coding || result.data?.coding || result[0]?.coding)?.length,
                     hasCoding: !!(result.coding || result.data?.coding || result[0]?.coding),
@@ -1347,12 +1361,12 @@
 
                 if (coding) {
                     processedData[0].coding = coding;
-                    console.log('✓ Claim summary received');
+                    console.log(' Claim summary received');
                 }
 
                 if (newResumeURL) {
                     resumeURL2 = newResumeURL;
-                    console.log('✓ ResumeURL2 received:', resumeURL2);
+                    console.log(' ResumeURL2 received:', resumeURL2);
                 } else {
                     console.warn('No resumeURL2 found in response - will use original resumeUrl');
                 }
@@ -1564,17 +1578,32 @@
                     checkbox.type = 'checkbox';
                     checkbox.checked = value;
                     checkbox.id = `field-${recordIndex}-${key}`;
-                    checkbox.addEventListener('change', (e) => {
-                        processedData[recordIndex][key] = e.target.checked;
-                        label.textContent = e.target.checked ? 'Yes' : 'No';
-                    });
-
-                    const label = document.createElement('label');
-                    label.textContent = value ? 'Yes' : 'No';
-                    label.style.fontWeight = 'normal';
-
-                    checkboxWrapper.appendChild(checkbox);
-                    checkboxWrapper.appendChild(label);
+                    
+                    // Check if field should be non-editable
+                    const isNonEditable = NON_EDITABLE_FIELDS.includes(key);
+                    
+                    if (isNonEditable) {
+                        checkbox.disabled = true;
+                        checkbox.style.cursor = 'not-allowed';
+                        checkbox.style.opacity = '0.6';
+                    } else {
+                        const label = document.createElement('label');
+                        label.textContent = value ? 'Yes' : 'No';
+                        label.style.fontWeight = 'normal';
+                        
+                        checkbox.addEventListener('change', (e) => {
+                            processedData[recordIndex][key] = e.target.checked;
+                            label.textContent = e.target.checked ? 'Yes' : 'No';
+                        });
+                        
+                        checkboxWrapper.appendChild(checkbox);
+                        checkboxWrapper.appendChild(label);
+                    }
+                    
+                    if (isNonEditable) {
+                        checkboxWrapper.appendChild(checkbox);
+                    }
+                    
                     wrapper.appendChild(checkboxWrapper);
                     
                     const copyIcon = document.createElement('span');
@@ -1662,6 +1691,14 @@
                     input.className = 'field-input';
                     input.value = value !== null ? value : '';
                     input.id = `field-${recordIndex}-${key}`;
+                    
+                    // Check if field should be non-editable
+                    if (NON_EDITABLE_FIELDS.includes(key)) {
+                        input.readOnly = true;
+                        input.style.backgroundColor = '#f5f5f5';
+                        input.style.cursor = 'not-allowed';
+                        input.style.color = '#666';
+                    }
                     
                     if (REQUIRED_FIELDS.includes(key)) {
                         input.required = true;
@@ -2120,6 +2157,8 @@
         function retryUpload() {
             if (selectedFiles && selectedFiles.length > 0) {
                 console.log('Retrying upload with existing files...');
+                hideError();
+                document.getElementById('errorPage').classList.remove('show');
                 uploadFile();
             } else {
                 processAnother();
