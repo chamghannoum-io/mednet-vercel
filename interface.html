@@ -1973,7 +1973,7 @@
                 <div class="case-summary-grid">
                     ${item.member_name ? `<div class="case-summary-item"><div class="case-summary-label">Member Name</div><div class="case-summary-value">${item.member_name}</div></div>` : ''}
                     ${item.policy_number ? `<div class="case-summary-item"><div class="case-summary-label">Policy Number</div><div class="case-summary-value">${item.policy_number}</div></div>` : ''}
-                    ${(item.payer && item.plan) ? `<div class="case-summary-item"><div class="case-summary-label">Payer & Plan</div><div class="case-summary-value">${item.payer} - ${item.plan}</div></div>` : ''}
+                    ${(item.payer || item.plan) ? `<div class="case-summary-item"><div class="case-summary-label">${item.payer && item.plan ? 'Payer & Plan' : (item.payer ? 'Payer' : 'Plan')}</div><div class="case-summary-value">${item.payer && item.plan ? `${item.payer} - ${item.plan}` : (item.payer || item.plan)}</div></div>` : ''}
                     ${item.network ? `<div class="case-summary-item"><div class="case-summary-label">Network</div><div class="case-summary-value">${item.network}</div></div>` : ''}
                     ${item.age ? `<div class="case-summary-item"><div class="case-summary-label">Age</div><div class="case-summary-value">${item.age}</div></div>` : ''}
                     ${item.gender ? `<div class="case-summary-item"><div class="case-summary-label">Gender</div><div class="case-summary-value">${item.gender}</div></div>` : ''}
@@ -2056,7 +2056,7 @@
                     ${item.within_benefit_limit !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Within Benefit Limit</div><div class="case-summary-value ${item.within_benefit_limit ? 'success' : 'error'}">${item.within_benefit_limit ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
                     ${item.geographical_coverage !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Geographical Coverage</div><div class="case-summary-value ${item.geographical_coverage ? 'success' : 'error'}">${item.geographical_coverage ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
                     ${item.max_sessions && item.max_sessions !== 'N/A' ? `<div class="case-summary-item"><div class="case-summary-label">Max Sessions</div><div class="case-summary-value">${item.max_sessions}</div></div>` : ''}
-                    ${item.benefit_limit ? `<div class="case-summary-item"><div class="case-summary-label">Benefit Limit</div><div class="case-summary-value highlight">${item.currency || ''} ${item.benefit_limit}</div></div>` : ''}
+                    ${item.benefit_limit ? `<div class="case-summary-item"><div class="case-summary-label">Benefit Limit</div><div class="case-summary-value highlight">${isNaN(item.benefit_limit) ? item.benefit_limit : (item.currency || '') + ' ' + item.benefit_limit}</div></div>` : ''}
                 </div>
             `;
             container.appendChild(coverageSection);
