@@ -2064,7 +2064,7 @@
             // Financial Summary Section
             const financialSection = document.createElement('div');
             financialSection.className = 'financial-summary';
-            const currency = item.currency || 'AED';
+            const currency = 'AED'; // Always display in AED (values converted in n8n)
             financialSection.innerHTML = `
                 <h3 class="case-summary-title" style="border-color: #16b1b5;">Financial Breakdown</h3>
                 <div class="financial-row">
