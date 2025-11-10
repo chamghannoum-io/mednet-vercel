@@ -941,6 +941,130 @@
             line-height: 1.8;
             margin-bottom: 12px;
         }
+
+        /* Case Summary Styles */
+        .case-summary-section {
+            background: #f8fffe;
+            border: 2px solid #16b1b5;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .case-summary-title {
+            font-size: 22px;
+            color: #128e91;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #16b1b5;
+        }
+
+        .case-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .case-summary-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .case-summary-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .case-summary-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .case-summary-value.highlight {
+            color: #16b1b5;
+            font-size: 18px;
+        }
+
+        .case-summary-value.success {
+            color: #4caf50;
+        }
+
+        .case-summary-value.warning {
+            color: #ff9800;
+        }
+
+        .case-summary-value.error {
+            color: #f44336;
+        }
+
+        .coverage-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .coverage-badge.covered {
+            background: #4caf50;
+            color: white;
+        }
+
+        .coverage-badge.not-covered {
+            background: #f44336;
+            color: white;
+        }
+
+        .coverage-badge.partial {
+            background: #ff9800;
+            color: white;
+        }
+
+        .financial-summary {
+            background: linear-gradient(135deg, #f8fffe 0%, #e6f9f9 100%);
+            border: 2px solid #16b1b5;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .financial-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .financial-row:last-child {
+            border-bottom: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: #16b1b5;
+            padding-top: 15px;
+            margin-top: 10px;
+            border-top: 2px solid #16b1b5;
+        }
+
+        .financial-label {
+            font-size: 15px;
+            color: #555;
+        }
+
+        .financial-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -1001,8 +1125,22 @@
             <div class="success-message" id="claimSuccessMessage"></div>
             
             <div class="action-buttons">
-                <button class="btn" onclick="saveChangesFromSummary(event)">Save & Submit</button>
+                <button class="btn" id="proceedToCaseSummaryBtn" onclick="handleProceedToCaseSummary()" style="background: linear-gradient(135deg, #16b1b5 0%, #128e91 100%);">Proceed to Case Summary</button>
                 <button class="btn btn-secondary" onclick="goBackToFields()">Back to Edit Fields</button>
+                <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
+            </div>
+        </div>
+
+        <!-- Case Summary Page Section -->
+        <div class="results-section" id="caseSummarySection">
+            <h2 style="color: #128e91; margin-bottom: 30px; font-size: 28px;">Case Summary</h2>
+            <div id="caseSummaryContainer"></div>
+            
+            <div class="success-message" id="caseSuccessMessage"></div>
+            
+            <div class="action-buttons">
+                <button class="btn" onclick="saveChangesFromCaseSummary(event)">Save & Submit</button>
+                <button class="btn btn-secondary" onclick="goBackToClaimSummary()">Back to Claim Summary</button>
                 <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
             </div>
         </div>
@@ -1066,6 +1204,22 @@
             </div>
         </div>
 
+        <!-- Confirmation Modal -->
+        <div class="validation-modal" id="confirmationModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title" style="color: #f57c00;">Confirm Action</div>
+                </div>
+                <div class="modal-body" id="confirmationMessage">
+                    Are you sure you want to proceed?
+                </div>
+                <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="modal-btn" style="background: #999;" onclick="closeConfirmationModal(false)">Cancel</button>
+                    <button class="modal-btn" onclick="closeConfirmationModal(true)">OK</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Load configuration file -->
@@ -1096,7 +1250,9 @@
             'receipt_number',
             'invoice_number',
             'physician_signature',
-            'physician_stamp'
+            'physician_stamp',
+            'documents_attached',
+            'docs_attached'
         ];
 
         // Development Mode Toggle
@@ -1478,9 +1634,28 @@
 
         // Function to fetch claim summary and navigate to second page
         async function fetchClaimSummaryAndNavigate(resumeURL1, recordIndex = 0) {
-            console.log('⏳ Calling resumeURL1 to fetch claim summary and checklist...');
+            console.log('Calling resumeURL1 to fetch claim summary and checklist...');
+            console.log('Sending extracted field data back to n8n...');
 
             try {
+                // Prepare cleaned data to send back to n8n
+                const cleanedData = processedData.map(record => {
+                    const cleaned = {};
+                    Object.keys(record).forEach(key => {
+                        if (!key.endsWith('_image_snippet') && 
+                            key !== 'resumeUrl' && 
+                            key !== 'resumeURL' &&
+                            key !== 'base64_image' && 
+                            key !== 'coding' &&
+                            key !== 'checkList') {
+                            cleaned[key] = record[key];
+                        }
+                    });
+                    return cleaned;
+                });
+
+                console.log('Sending data:', cleanedData);
+
                 // Call resumeURL1 (either through proxy or direct)
                 let response;
                 if (USE_CORS_PROXY) {
@@ -1489,14 +1664,14 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             resumeUrl: resumeURL1,
-                            data: {}
+                            data: cleanedData
                         })
                     });
                 } else {
                     response = await fetch(resumeURL1, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({})
+                        body: JSON.stringify(cleanedData)
                     });
                 }
 
@@ -1505,12 +1680,12 @@
                 }
 
                 const result = await response.json();
-                console.log('✓ Received claim summary response:', result);
+                console.log('Received claim summary response:', result);
                 
                 // Extract the data - handle both array and object responses
                 const summaryData = Array.isArray(result) ? result[0] : result;
                 
-                console.log('📋 Extracted data:', {
+                console.log('Extracted data:', {
                     hasCoding: !!summaryData.coding,
                     hasChecklist: !!summaryData.checkList,
                     checklistLength: summaryData.checkList?.length || 0,
@@ -1536,16 +1711,16 @@
                 const newResumeURL = summaryData.resumeURL || summaryData.resumeUrl;
                 if (newResumeURL) {
                     resumeURL2 = newResumeURL;
-                    console.log('✓ ResumeURL2 received:', resumeURL2);
+                    console.log('ResumeURL2 received:', resumeURL2);
                 } else {
-                    console.warn('⚠ No resumeURL2 found in response - will use original resumeUrl');
+                    console.warn('No resumeURL2 found in response - will use original resumeUrl');
                 }
 
                 // Navigate to the claim summary page
                 displayClaimSummaryPage(recordIndex);
 
             } catch (error) {
-                console.error('❌ Error fetching claim summary:', error);
+                console.error('Error fetching claim summary:', error);
 
                 // Re-enable the proceed button
                 const proceedBtn = document.getElementById(`proceed-btn-${recordIndex}`);
@@ -1560,7 +1735,7 @@
 
         // Function to display the claim summary and checklist on the second page
         function displayClaimSummaryPage(recordIndex = 0) {
-            console.log('📄 Displaying claim summary page for record', recordIndex);
+            console.log('Displaying claim summary page for record', recordIndex);
             
             const item = processedData[recordIndex];
             
@@ -1636,8 +1811,334 @@
             window.scrollTo(0, 0);
         }
         
-        // Function to save from the summary page
+        // Function to handle proceed to case summary
+        function handleProceedToCaseSummary(recordIndex = 0) {
+            // Show custom confirmation dialog
+            showConfirmationModal(
+                'Are you sure you want to proceed to case summary? You will not be able to go back to edit the claim summary and checklist after this step.',
+                (confirmed) => {
+                    if (!confirmed) {
+                        return; // User cancelled, do nothing
+                    }
+                    
+                    // Check if case summary data is already loaded
+                    const item = processedData[recordIndex];
+                    if (item.coverage_status && item.covered_amount !== undefined) {
+                        // Data already loaded, just navigate to the case summary page
+                        console.log('✓ Case summary already loaded, navigating directly...');
+                        displayCaseSummaryPage(recordIndex);
+                        return;
+                    }
+                    
+                    const resumeURL2Local = resumeURL2 || window.storedResumeURL1;
+                    if (!resumeURL2Local) {
+                        showError('No resume URL available to proceed');
+                        return;
+                    }
+                    
+                    // Update the button to show processing
+                    const proceedBtn = document.getElementById('proceedToCaseSummaryBtn');
+                    if (proceedBtn) {
+                        proceedBtn.disabled = true;
+                        proceedBtn.textContent = 'Processing...';
+                    }
+                    
+                    // Fetch the case summary and navigate to third page
+                    fetchCaseSummaryAndNavigate(resumeURL2Local, recordIndex);
+                }
+            );
+        }
+        
+        // Function to fetch case summary and navigate to third page
+        async function fetchCaseSummaryAndNavigate(resumeURL, recordIndex = 0) {
+            console.log('Calling resumeURL to fetch case summary...');
+            console.log('Sending claim summary data back to n8n...');
+
+            try {
+                // Prepare cleaned data to send back to n8n (including coding and checklist from page 2)
+                const cleanedData = processedData.map(record => {
+                    const cleaned = {};
+                    Object.keys(record).forEach(key => {
+                        if (!key.endsWith('_image_snippet') && 
+                            key !== 'resumeUrl' && 
+                            key !== 'resumeURL' &&
+                            key !== 'base64_image' &&
+                            key !== 'coverage_status' &&
+                            key !== 'covered_amount' &&
+                            key !== 'patient_responsibility' &&
+                            key !== 'within_benefit_limit' &&
+                            key !== 'geographical_coverage' &&
+                            key !== 'coverage_issues' &&
+                            key !== 'benefit_limit' &&
+                            key !== 'excess_amount' &&
+                            key !== 'copay_percentage' &&
+                            key !== 'copay_cap' &&
+                            key !== 'copay_amount' &&
+                            key !== 'deductible' &&
+                            key !== 'max_sessions') {
+                            cleaned[key] = record[key];
+                        }
+                    });
+                    return cleaned;
+                });
+
+                console.log('Sending data:', cleanedData);
+
+                // Call resumeURL (either through proxy or direct)
+                let response;
+                if (USE_CORS_PROXY) {
+                    response = await fetch(CORS_PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            resumeUrl: resumeURL,
+                            data: cleanedData
+                        })
+                    });
+                } else {
+                    response = await fetch(resumeURL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cleanedData)
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch case summary: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Received case summary response:', result);
+                
+                // Extract the data - handle both array and object responses
+                const caseSummaryData = Array.isArray(result) ? result[0] : result;
+                
+                console.log('Extracted case summary data:', {
+                    hasCoverageStatus: !!caseSummaryData.coverage_status,
+                    hasCoveredAmount: caseSummaryData.covered_amount !== undefined,
+                    hasResumeURL: !!(caseSummaryData.resumeURL || caseSummaryData.resumeUrl)
+                });
+
+                // Merge the case summary data into processedData
+                Object.keys(caseSummaryData).forEach(key => {
+                    processedData[recordIndex][key] = caseSummaryData[key];
+                });
+
+                // Store resumeURL3 for final save if present
+                const newResumeURL = caseSummaryData.resumeURL || caseSummaryData.resumeUrl;
+                if (newResumeURL) {
+                    resumeURL2 = newResumeURL;
+                    console.log('ResumeURL3 received:', resumeURL2);
+                }
+
+                // Navigate to the case summary page
+                displayCaseSummaryPage(recordIndex);
+
+            } catch (error) {
+                console.error('Error fetching case summary:', error);
+
+                // Re-enable the proceed button
+                const proceedBtn = document.getElementById('proceedToCaseSummaryBtn');
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = 'Proceed to Case Summary';
+                }
+
+                showError('Failed to load case summary: ' + error.message);
+            }
+        }
+        
+        // Function to display the case summary on the third page
+        function displayCaseSummaryPage(recordIndex = 0) {
+            console.log('Displaying case summary page for record', recordIndex);
+            
+            const item = processedData[recordIndex];
+            
+            // Hide the claim summary page
+            document.getElementById('claimSummarySection').classList.remove('show');
+            
+            // Show the case summary page
+            const caseSummarySection = document.getElementById('caseSummarySection');
+            caseSummarySection.classList.add('show');
+            
+            // Render the content
+            const container = document.getElementById('caseSummaryContainer');
+            container.innerHTML = '';
+            
+            // Patient & Policy Information Section
+            const patientSection = document.createElement('div');
+            patientSection.className = 'case-summary-section';
+            patientSection.innerHTML = `
+                <h3 class="case-summary-title">Patient & Policy Information</h3>
+                <div class="case-summary-grid">
+                    ${item.member_name ? `<div class="case-summary-item"><div class="case-summary-label">Member Name</div><div class="case-summary-value">${item.member_name}</div></div>` : ''}
+                    ${item.policy_number ? `<div class="case-summary-item"><div class="case-summary-label">Policy Number</div><div class="case-summary-value">${item.policy_number}</div></div>` : ''}
+                    ${(item.payer && item.plan) ? `<div class="case-summary-item"><div class="case-summary-label">Payer & Plan</div><div class="case-summary-value">${item.payer} - ${item.plan}</div></div>` : ''}
+                    ${item.network ? `<div class="case-summary-item"><div class="case-summary-label">Network</div><div class="case-summary-value">${item.network}</div></div>` : ''}
+                    ${item.age ? `<div class="case-summary-item"><div class="case-summary-label">Age</div><div class="case-summary-value">${item.age}</div></div>` : ''}
+                    ${item.gender ? `<div class="case-summary-item"><div class="case-summary-label">Gender</div><div class="case-summary-value">${item.gender}</div></div>` : ''}
+                    ${item.country ? `<div class="case-summary-item"><div class="case-summary-label">Country</div><div class="case-summary-value">${item.country}</div></div>` : ''}
+                    ${item.date_of_treatment ? `<div class="case-summary-item"><div class="case-summary-label">Date of Treatment</div><div class="case-summary-value">${item.date_of_treatment}</div></div>` : ''}
+                </div>
+            `;
+            container.appendChild(patientSection);
+            
+            // Medical Information Section
+            const medicalSection = document.createElement('div');
+            medicalSection.className = 'case-summary-section';
+            medicalSection.innerHTML = `
+                <h3 class="case-summary-title">Medical Information</h3>
+                <div class="case-summary-grid">
+                    ${item.diagnosis ? `<div class="case-summary-item" style="grid-column: 1 / -1;"><div class="case-summary-label">Diagnosis</div><div class="case-summary-value">${item.diagnosis}</div></div>` : ''}
+                    ${item.provider ? `<div class="case-summary-item"><div class="case-summary-label">Provider</div><div class="case-summary-value">${item.provider}</div></div>` : ''}
+                    ${item.physician_name ? `<div class="case-summary-item"><div class="case-summary-label">Physician Name</div><div class="case-summary-value">${item.physician_name}</div></div>` : ''}
+                    ${item.claim_type ? `<div class="case-summary-item"><div class="case-summary-label">Claim Type</div><div class="case-summary-value highlight">${item.claim_type.replace(/_/g, ' ')}</div></div>` : ''}
+                </div>
+            `;
+            container.appendChild(medicalSection);
+            
+            // Coverage Status Section
+            const coverageSection = document.createElement('div');
+            coverageSection.className = 'case-summary-section';
+            
+            // Determine approval/rejection status
+            const isRejected = item.approval_status === 'REJECT' || item.coverage_status === 'NOT_COVERED';
+            const isApproved = item.approval_status === 'APPROVE' || item.coverage_status === 'COVERED';
+            
+            let coverageBadgeClass = 'covered';
+            if (item.coverage_status === 'NOT_COVERED') coverageBadgeClass = 'not-covered';
+            else if (item.coverage_status === 'PARTIAL') coverageBadgeClass = 'partial';
+            
+            coverageSection.innerHTML = `
+                <h3 class="case-summary-title">Coverage & Approval Status</h3>
+                
+                ${item.approval_status ? `
+                    <div style="margin-bottom: 20px; padding: 20px; background: ${isRejected ? '#fff3f3' : '#f0fdf4'}; border-left: 4px solid ${isRejected ? '#f44336' : '#4caf50'}; border-radius: 4px;">
+                        <div style="font-size: 18px; font-weight: 600; color: ${isRejected ? '#f44336' : '#4caf50'}; margin-bottom: 10px;">
+                            ${isRejected ? '❌ Claim Rejected' : '✓ Claim Approved'}
+                        </div>
+                        ${isRejected && (item.decision_reasons && item.decision_reasons.length > 0) ? `
+                            <div style="margin-top: 10px;">
+                                <div style="font-weight: 600; color: #333; margin-bottom: 8px;">Rejection Reasons:</div>
+                                <ul style="margin: 0; padding-left: 20px; color: #666;">
+                                    ${item.decision_reasons.map(reason => `<li>${reason}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${isRejected && (item.coverage_issues && item.coverage_issues.length > 0) ? `
+                            <div style="margin-top: 15px;">
+                                <div style="font-weight: 600; color: #333; margin-bottom: 8px;">Coverage Issues:</div>
+                                ${item.coverage_issues.map(issue => {
+                                    if (typeof issue === 'object' && issue.issue) {
+                                        return `
+                                            <div style="margin-bottom: 12px; padding: 12px; background: white; border-radius: 4px; border: 1px solid #ffcdd2;">
+                                                <div style="font-weight: 600; color: #d32f2f; margin-bottom: 4px;">
+                                                    ${issue.issue}
+                                                </div>
+                                                ${issue.details ? `<div style="color: #666; font-size: 14px; margin-bottom: 4px;">${issue.details}</div>` : ''}
+                                                ${issue.action_required ? `<div style="color: #f57c00; font-size: 14px; font-style: italic;">Action Required: ${issue.action_required}</div>` : ''}
+                                            </div>
+                                        `;
+                                    } else {
+                                        return `<div style="padding: 8px 0; color: #666;">• ${issue}</div>`;
+                                    }
+                                }).join('')}
+                            </div>
+                        ` : ''}
+                        ${isApproved ? `
+                            <div style="color: #2e7d32; font-size: 16px;">This claim has been approved for processing.</div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                <div class="case-summary-grid">
+                    ${item.coverage_status ? `<div class="case-summary-item"><div class="case-summary-label">Coverage Status</div><div class="case-summary-value"><span class="coverage-badge ${coverageBadgeClass}">${item.coverage_status.replace(/_/g, ' ')}</span></div></div>` : ''}
+                    ${item.within_benefit_limit !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Within Benefit Limit</div><div class="case-summary-value ${item.within_benefit_limit ? 'success' : 'error'}">${item.within_benefit_limit ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
+                    ${item.geographical_coverage !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Geographical Coverage</div><div class="case-summary-value ${item.geographical_coverage ? 'success' : 'error'}">${item.geographical_coverage ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
+                    ${item.max_sessions && item.max_sessions !== 'N/A' ? `<div class="case-summary-item"><div class="case-summary-label">Max Sessions</div><div class="case-summary-value">${item.max_sessions}</div></div>` : ''}
+                    ${item.benefit_limit ? `<div class="case-summary-item"><div class="case-summary-label">Benefit Limit</div><div class="case-summary-value highlight">${item.currency || ''} ${item.benefit_limit}</div></div>` : ''}
+                </div>
+            `;
+            container.appendChild(coverageSection);
+            
+            // Financial Summary Section
+            const financialSection = document.createElement('div');
+            financialSection.className = 'financial-summary';
+            const currency = item.currency || 'AED';
+            financialSection.innerHTML = `
+                <h3 class="case-summary-title" style="border-color: #16b1b5;">Financial Breakdown</h3>
+                <div class="financial-row">
+                    <span class="financial-label">Claimed Amount:</span>
+                    <span class="financial-value">${currency} ${item.claimed_amount || '0.00'}</span>
+                </div>
+                ${item.excess_amount ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Excess Amount:</span>
+                        <span class="financial-value">${currency} ${item.excess_amount}</span>
+                    </div>
+                ` : ''}
+                ${item.deductible !== undefined ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Deductible:</span>
+                        <span class="financial-value">${currency} ${item.deductible}</span>
+                    </div>
+                ` : ''}
+                ${item.copay_percentage ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Co-pay Percentage:</span>
+                        <span class="financial-value">${item.copay_percentage}% ${item.copay_cap ? `(Cap: ${item.copay_cap})` : ''}</span>
+                    </div>
+                ` : ''}
+                ${item.copay_amount ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Co-pay Amount:</span>
+                        <span class="financial-value">${currency} ${item.copay_amount}</span>
+                    </div>
+                ` : ''}
+                ${item.covered_amount !== undefined ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Covered Amount:</span>
+                        <span class="financial-value" style="color: #4caf50;">${currency} ${item.covered_amount}</span>
+                    </div>
+                ` : ''}
+                ${item.patient_responsibility ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Patient Share:</span>
+                        <span class="financial-value" style="color: #16b1b5; font-size: 20px;">${currency} ${item.patient_responsibility}</span>
+                    </div>
+                ` : ''}
+            `;
+            container.appendChild(financialSection);
+            
+            console.log('✓ Case summary rendered');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+        
+        // Function to go back to the claim summary page
+        function goBackToClaimSummary() {
+            document.getElementById('caseSummarySection').classList.remove('show');
+            document.getElementById('claimSummarySection').classList.add('show');
+            
+            // Update the proceed button text since data is already loaded
+            const proceedBtn = document.getElementById('proceedToCaseSummaryBtn');
+            if (proceedBtn) {
+                proceedBtn.textContent = 'View Case Summary';
+                proceedBtn.disabled = false;
+            }
+            
+            window.scrollTo(0, 0);
+        }
+        
+        // Function to save from the claim summary page
         function saveChangesFromSummary(event) {
+            // Use the same save logic as the main save function
+            saveChanges(event);
+        }
+        
+        // Function to save from the case summary page
+        function saveChangesFromCaseSummary(event) {
             // Use the same save logic as the main save function
             saveChanges(event);
         }
@@ -1777,8 +2278,10 @@
                     
                     if (isNonEditable) {
                         checkbox.disabled = true;
-                        checkbox.style.cursor = 'not-allowed';
+                        checkbox.style.cursor = 'default';
                         checkbox.style.opacity = '0.6';
+                        checkbox.title = 'OCR Detected Fields';
+                        checkboxWrapper.title = 'OCR Detected Fields';
                     } else {
                         const label = document.createElement('label');
                         label.textContent = value ? 'Yes' : 'No';
@@ -1818,6 +2321,14 @@
                     arrayWrapper.className = 'array-field';
                     arrayWrapper.id = `array-${recordIndex}-${key}`;
                 
+                    // Check if field should be non-editable
+                    const isNonEditable = NON_EDITABLE_FIELDS.includes(key);
+                    
+                    if (isNonEditable) {
+                        arrayWrapper.style.opacity = '0.7';
+                        arrayWrapper.title = 'OCR Detected Fields';
+                    }
+                
                     if (processedData[recordIndex][key].some(item => Array.isArray(item))) {
                         processedData[recordIndex][key] = processedData[recordIndex][key].flat();
                     }
@@ -1830,10 +2341,17 @@
                             const tag = document.createElement('span');
                             tag.className = 'array-tag';
                             
+                            if (isNonEditable) {
+                                tag.style.backgroundColor = '#999';
+                                tag.style.cursor = 'default';
+                            }
+                            
                             const tagText = document.createElement('span');
                             tagText.textContent = item;
                             tag.appendChild(tagText);
                             
+                            // Only add delete button if not non-editable
+                            if (!isNonEditable) {
                             const deleteBtn = document.createElement('span');
                             deleteBtn.className = 'array-tag-delete';
                             deleteBtn.textContent = '×';
@@ -1843,10 +2361,13 @@
                                 renderArray();
                             });
                             tag.appendChild(deleteBtn);
+                            }
                             
                             arrayWrapper.appendChild(tag);
                         });
                         
+                        // Only add the + button if not non-editable
+                        if (!isNonEditable) {
                         const addBtn = document.createElement('span');
                         addBtn.className = 'array-add-btn';
                         addBtn.textContent = '+';
@@ -1858,6 +2379,7 @@
                             });
                         });
                         arrayWrapper.appendChild(addBtn);
+                        }
                     };
                     
                     renderArray();
@@ -1889,8 +2411,9 @@
                     if (NON_EDITABLE_FIELDS.includes(key)) {
                         input.readOnly = true;
                         input.style.backgroundColor = '#f5f5f5';
-                        input.style.cursor = 'not-allowed';
+                        input.style.cursor = 'default';
                         input.style.color = '#666';
+                        input.title = 'OCR Detected Fields';
                     }
                     
                     if (REQUIRED_FIELDS.includes(key)) {
@@ -2095,6 +2618,27 @@
             closeAddArrayModal();
         }
 
+        // Confirmation modal functions
+        let confirmationCallback = null;
+
+        function showConfirmationModal(message, callback) {
+            const modal = document.getElementById('confirmationModal');
+            const messageElement = document.getElementById('confirmationMessage');
+            messageElement.textContent = message;
+            confirmationCallback = callback;
+            modal.classList.add('show');
+        }
+
+        function closeConfirmationModal(confirmed) {
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.remove('show');
+            
+            if (confirmationCallback) {
+                confirmationCallback(confirmed);
+                confirmationCallback = null;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const confirmBtn = document.getElementById('confirmAddArrayItem');
             if (confirmBtn) {
@@ -2162,7 +2706,10 @@
         window.toggleFieldsAccordion = toggleFieldsAccordion;
         window.handleProceedClick = handleProceedClick;
         window.goBackToFields = goBackToFields;
+        window.handleProceedToCaseSummary = handleProceedToCaseSummary;
+        window.goBackToClaimSummary = goBackToClaimSummary;
         window.saveChangesFromSummary = saveChangesFromSummary;
+        window.saveChangesFromCaseSummary = saveChangesFromCaseSummary;
 
         async function saveChanges(event) {
             if (!processedData || processedData.length === 0) {
@@ -2343,6 +2890,7 @@
             updateFileList();
             document.getElementById('resultsSection').classList.remove('show');
             document.getElementById('claimSummarySection').classList.remove('show');
+            document.getElementById('caseSummarySection').classList.remove('show');
             document.getElementById('errorPage').classList.remove('show');
             document.getElementById('uploadSection').style.display = 'block';
             hideError();
