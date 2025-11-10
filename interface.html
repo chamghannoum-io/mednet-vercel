@@ -813,6 +813,134 @@
             flex-wrap: wrap;
             margin-top: 30px;
         }
+
+        /* Checklist Styles */
+        .checklist-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8fffe;
+            border: 2px solid #16b1b5;
+            border-radius: 10px;
+        }
+
+        .checklist-title {
+            font-size: 22px;
+            color: #128e91;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #16b1b5;
+        }
+
+        .checklist-items {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item.passed {
+            border-color: #4caf50;
+            background: #f1f8f4;
+        }
+
+        .checklist-item.failed {
+            border-color: #f44336;
+            background: #fff3f3;
+        }
+
+        .checklist-item-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .checklist-icon {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .checklist-icon.passed {
+            color: #4caf50;
+        }
+
+        .checklist-icon.failed {
+            color: #f44336;
+        }
+
+        .checklist-item-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .checklist-item-required {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .checklist-item-status {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .checklist-item-status.passed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .checklist-item-status.failed {
+            background: #f44336;
+            color: white;
+        }
+
+        .claim-summary-box {
+            background: #f8fffe;
+            border: 2px solid #16b1b5;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .claim-summary-box h2 {
+            color: #16b1b5;
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .claim-summary-box h2:first-child {
+            margin-top: 0;
+        }
+
+        .claim-summary-box h3 {
+            color: #128e91;
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .claim-summary-box p {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
@@ -861,6 +989,20 @@
             <div class="action-buttons">
                 <button class="btn" onclick="saveChanges(event)">Save Changes</button>
                 <button class="btn btn-secondary" onclick="exportJSON()">Export JSON</button>
+                <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
+            </div>
+        </div>
+
+        <!-- Claim Summary Page Section -->
+        <div class="results-section" id="claimSummarySection">
+            <h2 style="color: #128e91; margin-bottom: 30px; font-size: 28px;">Claim Summary & Checklist</h2>
+            <div id="claimSummaryContainer"></div>
+            
+            <div class="success-message" id="claimSuccessMessage"></div>
+            
+            <div class="action-buttons">
+                <button class="btn" onclick="saveChangesFromSummary(event)">Save & Submit</button>
+                <button class="btn btn-secondary" onclick="goBackToFields()">Back to Edit Fields</button>
                 <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
             </div>
         </div>
@@ -945,6 +1087,7 @@
         // Fields that should NOT be editable
         const NON_EDITABLE_FIELDS = [
             'gender',
+            'country',
             'card_number',
             'policy_number',
             'diagnosis',
@@ -1278,14 +1421,14 @@
                 document.getElementById('loading').classList.remove('show');
                 document.getElementById('resultsSection').classList.add('show');
 
-                // Step 2: Immediately call resumeURL1 to get claim summary
+                // Store resumeURL1 for later use when user clicks Proceed
                 const resumeURL1 = processedData[0]?.resumeURL || processedData[0]?.resumeUrl;
                 if (resumeURL1) {
-                    console.log(' ResumeURL1 found, calling it to fetch claim summary...');
-                    // Call resumeURL1 asynchronously (don't await - let it load in background)
-                    fetchClaimSummary(resumeURL1);
+                    console.log('✓ ResumeURL1 found, waiting for user to click Proceed...');
+                    // Store it globally so the Proceed button can use it
+                    window.storedResumeURL1 = resumeURL1;
                 } else {
-                    console.warn(' No resumeURL found in response - cannot fetch claim summary');
+                    console.warn('⚠ No resumeURL found in response - cannot fetch claim summary');
                 }
 
             } catch (error) {
@@ -1305,22 +1448,39 @@
             }
         }
 
-        // Function to fetch claim summary by calling resumeURL1
-        async function fetchClaimSummary(resumeURL1) {
-            console.log(' Calling resumeURL1 to trigger claim summary generation...');
+        // Handler for Proceed button click
+        function handleProceedClick(recordIndex) {
+            // Check if claim summary is already loaded
+            const item = processedData[recordIndex];
+            if (item.coding && item.checkList) {
+                // Data already loaded, just navigate to the summary page
+                console.log('✓ Claim summary already loaded, navigating directly...');
+                displayClaimSummaryPage(recordIndex);
+                return;
+            }
+            
+            const resumeURL1 = window.storedResumeURL1;
+            if (!resumeURL1) {
+                showError('No resume URL available to proceed');
+                return;
+            }
+            
+            // Update the proceed button to show processing
+            const proceedBtn = document.getElementById(`proceed-btn-${recordIndex}`);
+            if (proceedBtn) {
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = 'Processing...';
+            }
+            
+            // Fetch the claim summary and navigate to second page
+            fetchClaimSummaryAndNavigate(resumeURL1, recordIndex);
+        }
+
+        // Function to fetch claim summary and navigate to second page
+        async function fetchClaimSummaryAndNavigate(resumeURL1, recordIndex = 0) {
+            console.log('⏳ Calling resumeURL1 to fetch claim summary and checklist...');
 
             try {
-                // Show loading state
-                const summaryBtn = document.getElementById('summary-btn-0');
-                if (summaryBtn) {
-                    summaryBtn.classList.add('loading');
-                    summaryBtn.innerHTML = `
-                        <span>Loading Claim Summary...</span>
-                        <span class="arrow">⟳</span>
-                    `;
-                    summaryBtn.disabled = true;
-                }
-
                 // Call resumeURL1 (either through proxy or direct)
                 let response;
                 if (USE_CORS_PROXY) {
@@ -1345,108 +1505,141 @@
                 }
 
                 const result = await response.json();
-                console.log(' Received claim summary response:', result);
+                console.log('✓ Received claim summary response:', result);
                 
-                // Debug: log the full result structure
-                console.log(' Extracted data:', {
-                    coding: result.coding || result.data?.coding || result[0]?.coding,
-                    codingLength: (result.coding || result.data?.coding || result[0]?.coding)?.length,
-                    hasCoding: !!(result.coding || result.data?.coding || result[0]?.coding),
-                    resumeURL: result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl,
-                    hasResumeURL: !!(result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl)
+                // Extract the data - handle both array and object responses
+                const summaryData = Array.isArray(result) ? result[0] : result;
+                
+                console.log('📋 Extracted data:', {
+                    hasCoding: !!summaryData.coding,
+                    hasChecklist: !!summaryData.checkList,
+                    checklistLength: summaryData.checkList?.length || 0,
+                    hasResumeURL: !!(summaryData.resumeURL || summaryData.resumeUrl)
                 });
 
-                const coding = result.coding || result.data?.coding || result[0]?.coding;
-                const newResumeURL = result.resumeURL || result.data?.resumeURL || result.resumeUrl || result.data?.resumeUrl || result[0]?.resumeURL || result[0]?.resumeUrl;
-
-                if (coding) {
-                    processedData[0].coding = coding;
-                    console.log(' Claim summary received');
+                // Store the coding in processedData
+                if (summaryData.coding) {
+                    processedData[recordIndex].coding = summaryData.coding;
                 }
 
+                // Store the checklist
+                if (summaryData.checkList) {
+                    processedData[recordIndex].checkList = summaryData.checkList;
+                }
+
+                // Store claim_type if present
+                if (summaryData.claim_type) {
+                    processedData[recordIndex].claim_type = summaryData.claim_type;
+                }
+
+                // Store resumeURL2 for final save
+                const newResumeURL = summaryData.resumeURL || summaryData.resumeUrl;
                 if (newResumeURL) {
                     resumeURL2 = newResumeURL;
-                    console.log(' ResumeURL2 received:', resumeURL2);
+                    console.log('✓ ResumeURL2 received:', resumeURL2);
                 } else {
-                    console.warn('No resumeURL2 found in response - will use original resumeUrl');
+                    console.warn('⚠ No resumeURL2 found in response - will use original resumeUrl');
                 }
 
-                updateCodingDisplay();
+                // Navigate to the claim summary page
+                displayClaimSummaryPage(recordIndex);
 
             } catch (error) {
-                console.error('Error fetching claim summary:', error);
+                console.error('❌ Error fetching claim summary:', error);
 
-                const btn = document.getElementById('summary-btn-0');
-                if (btn) {
-                    btn.classList.remove('loading');
-                    btn.innerHTML = `
-                        <span>Failed to Load Claim Summary</span>
-                        <span class="arrow">✕</span>
-                    `;
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
+                // Re-enable the proceed button
+                const proceedBtn = document.getElementById(`proceed-btn-${recordIndex}`);
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = 'Proceed to Claim Summary';
                 }
 
                 showError('Failed to load claim summary: ' + error.message);
             }
         }
 
-        function updateCodingDisplay() {
-            console.log('Updating coding display...');
+        // Function to display the claim summary and checklist on the second page
+        function displayClaimSummaryPage(recordIndex = 0) {
+            console.log('📄 Displaying claim summary page for record', recordIndex);
             
-            const hasCoding = processedData[0].coding && typeof processedData[0].coding === 'string' && processedData[0].coding.trim().length > 0;
+            const item = processedData[recordIndex];
             
-            if (!hasCoding) {
-                console.error('No valid coding to display');
-                return;
+            // Hide the first page
+            document.getElementById('resultsSection').classList.remove('show');
+            
+            // Show the claim summary page
+            const summarySection = document.getElementById('claimSummarySection');
+            summarySection.classList.add('show');
+            
+            // Render the content
+            const container = document.getElementById('claimSummaryContainer');
+            container.innerHTML = '';
+            
+            // Create claim summary box
+            if (item.coding) {
+                const summaryBox = document.createElement('div');
+                summaryBox.className = 'claim-summary-box';
+                const htmlContent = marked.parse(item.coding.trim());
+                summaryBox.innerHTML = htmlContent;
+                container.appendChild(summaryBox);
+                console.log('✓ Claim summary rendered');
             }
             
-            const existingSummaryBtn = document.getElementById('summary-btn-0');
-            if (existingSummaryBtn) {
-                existingSummaryBtn.classList.remove('loading');
-                existingSummaryBtn.innerHTML = `
-                    <span>View Claim Summary</span>
-                    <span class="arrow">▼</span>
-                `;
-                existingSummaryBtn.disabled = false;
-                existingSummaryBtn.style.opacity = '1';
-                existingSummaryBtn.style.cursor = 'pointer';
-                existingSummaryBtn.onclick = () => toggleSummaryAccordion(0);
+            // Create checklist section
+            if (item.checkList && Array.isArray(item.checkList) && item.checkList.length > 0) {
+                const checklistSection = document.createElement('div');
+                checklistSection.className = 'checklist-section';
                 
-                // Remove the display:none style from the accordion
-                const accordion = document.getElementById('summary-accordion-0');
-                if (accordion) {
-                    accordion.style.display = '';
-                }
+                let checklistHTML = `<h3 class="checklist-title">Document Checklist</h3>`;
+                checklistHTML += `<div class="checklist-items">`;
                 
-                const contentDiv = document.getElementById('accordion-content-0');
-                if (contentDiv) {
-                    const htmlContent = marked.parse(processedData[0].coding.trim());
-                    contentDiv.innerHTML = htmlContent;
-                    console.log('Claim summary content updated!');
-                }
-            } else {
-                const card = document.querySelector('.result-card');
-                if (card) {
-                    const fieldsAccordion = document.getElementById('fields-accordion-0');
-                    if (fieldsAccordion) {
-                        const summaryHtml = `
-                            <button class="btn-view-summary" id="summary-btn-0" onclick="toggleSummaryAccordion(0)">
-                                <span>View Claim Summary</span>
-                                <span class="arrow">▼</span>
-                            </button>
-                            <div class="claim-summary-accordion" id="summary-accordion-0">
-                                <div class="claim-summary-content" id="accordion-content-0">
-                                    ${marked.parse(processedData[0].coding.trim())}
+                item.checkList.forEach(checkItem => {
+                    const statusClass = checkItem.passed ? 'passed' : 'failed';
+                    const iconSymbol = checkItem.passed ? '✓' : '✕';
+                    
+                    checklistHTML += `
+                        <div class="checklist-item ${statusClass}">
+                            <div class="checklist-item-left">
+                                <span class="checklist-icon ${statusClass}">${iconSymbol}</span>
+                                <div>
+                                    <div class="checklist-item-name">${checkItem.item}</div>
+                                    ${checkItem.required ? '<div class="checklist-item-required">Required</div>' : ''}
                                 </div>
                             </div>
+                            <span class="checklist-item-status ${statusClass}">${checkItem.status}</span>
+                            </div>
                         `;
-                        fieldsAccordion.insertAdjacentHTML('afterend', summaryHtml);
-                        console.log('Claim summary section created!');
-                    }
-                }
+                });
+                
+                checklistHTML += `</div>`;
+                checklistSection.innerHTML = checklistHTML;
+                container.appendChild(checklistSection);
+                console.log('✓ Checklist rendered with', item.checkList.length, 'items');
             }
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+        
+        // Function to go back to the fields page
+        function goBackToFields() {
+            document.getElementById('claimSummarySection').classList.remove('show');
+            document.getElementById('resultsSection').classList.add('show');
+            
+            // Update the proceed button text since data is already loaded
+            const proceedBtn = document.getElementById('proceed-btn-0');
+            if (proceedBtn) {
+                proceedBtn.textContent = 'View Claim Summary';
+                proceedBtn.disabled = false;
+            }
+            
+            window.scrollTo(0, 0);
+        }
+        
+        // Function to save from the summary page
+        function saveChangesFromSummary(event) {
+            // Use the same save logic as the main save function
+            saveChanges(event);
         }
 
         function displayResults(dataArray) {
@@ -1456,14 +1649,7 @@
             Object.keys(summaryOpenedState).forEach(key => delete summaryOpenedState[key]);
 
             dataArray.forEach((item, index) => {
-                const hasCoding = item.coding && typeof item.coding === 'string' && item.coding.trim().length > 0;
-                
                 console.log(`Record ${index + 1}:`, {
-                    hasCoding: hasCoding,
-                    codingExists: !!item.coding,
-                    codingType: typeof item.coding,
-                    codingLength: item.coding ? item.coding.length : 0,
-                    codingTrimmedLength: item.coding ? item.coding.trim().length : 0,
                     allKeys: Object.keys(item)
                 });
                 
@@ -1486,28 +1672,12 @@
                             </thead>
                             <tbody id="fields-${index}"></tbody>
                         </table>
-                    </div>
-                    ${hasCoding ? `
-                        <button class="btn-view-summary" id="summary-btn-${index}" onclick="toggleSummaryAccordion(${index})">
-                            <span>View Claim Summary</span>
-                            <span class="arrow">▼</span>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn" id="proceed-btn-${index}" onclick="handleProceedClick(${index})" style="background: linear-gradient(135deg, #16b1b5 0%, #128e91 100%);">
+                                Proceed to Claim Summary
                         </button>
-                        <div class="claim-summary-accordion" id="summary-accordion-${index}">
-                            <div class="claim-summary-content" id="accordion-content-${index}">
-                                <!-- Markdown content will be inserted here -->
                             </div>
                         </div>
-                    ` : `
-                        <button class="btn-view-summary loading" id="summary-btn-${index}" disabled style="opacity: 0.7; cursor: wait;">
-                            <span>Loading Claim Summary...</span>
-                            <span class="arrow">⟳</span>
-                        </button>
-                        <div class="claim-summary-accordion" id="summary-accordion-${index}" style="display: none;">
-                            <div class="claim-summary-content" id="accordion-content-${index}">
-                                <!-- Content will be inserted when coding arrives -->
-                            </div>
-                        </div>
-                    `}
                     ${item.base64_image ? `
                         <div class="document-preview">
                             <h3>Document Preview</h3>
@@ -1520,20 +1690,7 @@
                 const fieldsContainer = document.getElementById(`fields-${index}`);
                 renderFields(item, fieldsContainer, index);
                 
-                if (hasCoding) {
-                    const contentDiv = document.getElementById(`accordion-content-${index}`);
-                    if (contentDiv) {
-                        const htmlContent = marked.parse(item.coding.trim());
-                        contentDiv.innerHTML = htmlContent;
-                        console.log(`Claim summary accordion created for Record ${index + 1}`);
-                    }
-                } else {
-                    console.log(`No coding field found for Record ${index + 1} - accordion will not appear`);
-                    if (item.coding) {
-                        console.log(`   Coding field exists but is empty or invalid. Length: ${item.coding.length}, Trimmed: ${item.coding.trim().length}`);
-                    }
-                }
-                
+                // Auto-open the first record's extracted info
                 if (index === 0) {
                     const fieldsAccordion = document.getElementById(`fields-accordion-${index}`);
                     const fieldsButton = document.getElementById(`fields-btn-${index}`);
@@ -1549,13 +1706,51 @@
         function renderFields(data, container, recordIndex) {
             console.log('Rendering fields for record', recordIndex, '- Total fields:', Object.keys(data).length);
             
+            // Separate fields into editable and non-editable
+            const editableFields = [];
+            const nonEditableFields = [];
+            
             Object.keys(data).forEach(key => {
                 if (key === 'base64_image' || key === 'resumeUrl' || key === 'coding' || key.endsWith('_image_snippet')) {
                     console.log(`  Skipping field: ${key}`);
                     return;
                 }
 
+                if (NON_EDITABLE_FIELDS.includes(key)) {
+                    nonEditableFields.push(key);
+                } else {
+                    editableFields.push(key);
+                }
+            });
+            
+            // Render editable fields first
+            editableFields.forEach(key => {
                 const row = document.createElement('tr');
+                renderFieldRow(row, key, data, recordIndex);
+                container.appendChild(row);
+            });
+            
+            // Add separator row if there are both editable and non-editable fields
+            if (editableFields.length > 0 && nonEditableFields.length > 0) {
+                const separatorRow = document.createElement('tr');
+                separatorRow.innerHTML = `
+                    <td colspan="3" style="padding: 15px 0; border: none; background: transparent;">
+                        <div style="height: 1px; background: #e0e0e0;"></div>
+                    </td>
+                `;
+                container.appendChild(separatorRow);
+            }
+            
+            // Render non-editable fields
+            nonEditableFields.forEach(key => {
+                const row = document.createElement('tr');
+                renderFieldRow(row, key, data, recordIndex);
+                container.appendChild(row);
+            });
+        }
+        
+        function renderFieldRow(row, key, data, recordIndex) {
+            const value = data[key];
                 
                 const nameCell = document.createElement('td');
                 nameCell.className = 'field-name-cell';
@@ -1564,8 +1759,6 @@
 
                 const valueCell = document.createElement('td');
                 valueCell.className = 'field-value-cell';
-
-                const value = data[key];
 
                 if (typeof value === 'boolean') {
                     const wrapper = document.createElement('div');
@@ -1766,8 +1959,6 @@
                 }
 
                 row.appendChild(imageCell);
-                container.appendChild(row);
-            });
         }
 
         function validateEitherOrFields(recordIndex) {
@@ -1969,7 +2160,9 @@
         }
 
         window.toggleFieldsAccordion = toggleFieldsAccordion;
-        window.toggleSummaryAccordion = toggleSummaryAccordion;
+        window.handleProceedClick = handleProceedClick;
+        window.goBackToFields = goBackToFields;
+        window.saveChangesFromSummary = saveChangesFromSummary;
 
         async function saveChanges(event) {
             if (!processedData || processedData.length === 0) {
@@ -2004,7 +2197,11 @@
                 const cleanedData = processedData.map(record => {
                     const cleaned = {};
                     Object.keys(record).forEach(key => {
-                        if (!key.endsWith('_image_snippet') && key !== 'resumeUrl' && key !== 'base64_image') {
+                        if (!key.endsWith('_image_snippet') && 
+                            key !== 'resumeUrl' && 
+                            key !== 'resumeURL' &&
+                            key !== 'base64_image' && 
+                            key !== 'checkList') {
                             cleaned[key] = record[key];
                         }
                     });
@@ -2027,7 +2224,11 @@
                 const cleanedData = processedData.map(record => {
                     const cleaned = {};
                     Object.keys(record).forEach(key => {
-                        if (!key.endsWith('_image_snippet') && key !== 'resumeUrl' && key !== 'base64_image') {
+                        if (!key.endsWith('_image_snippet') && 
+                            key !== 'resumeUrl' && 
+                            key !== 'resumeURL' &&
+                            key !== 'base64_image' && 
+                            key !== 'checkList') {
                             cleaned[key] = record[key];
                         }
                     });
@@ -2136,10 +2337,12 @@
             selectedFiles = [];
             processedData = null;
             resumeURL2 = null; // Reset resumeURL2
+            window.storedResumeURL1 = null; // Reset storedResumeURL1
 
             fileInput.value = '';
             updateFileList();
             document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('claimSummarySection').classList.remove('show');
             document.getElementById('errorPage').classList.remove('show');
             document.getElementById('uploadSection').style.display = 'block';
             hideError();
