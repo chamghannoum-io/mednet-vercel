@@ -2087,11 +2087,24 @@
             // Helper function to format dual currency display
             const formatDualCurrency = (originalAmount, aedAmount) => {
                 if (!originalAmount && !aedAmount) return '';
-                if (originalAmount && aedAmount && originalAmount !== aedAmount) {
+                
+                // Extract numeric values for comparison
+                const getNumericValue = (str) => {
+                    if (!str) return null;
+                    const match = String(str).match(/[\d,]+\.?\d*/);
+                    return match ? parseFloat(match[0].replace(/,/g, '')) : null;
+                };
+                
+                const originalValue = getNumericValue(originalAmount);
+                const aedValue = getNumericValue(aedAmount);
+                
+                // If both exist and have different numeric values, show both
+                if (originalAmount && aedAmount && originalValue !== null && aedValue !== null && originalValue !== aedValue) {
                     return `<span style="font-weight: 600;">${originalAmount}</span> <span style="color: #888; font-size: 14px;">≈</span> <span style="font-weight: 600; color: #16b1b5;">${aedAmount}</span>`;
                 }
-                // If only one currency or they're the same, just show what we have
-                return `<span style="font-weight: 600;">${originalAmount || aedAmount}</span>`;
+                
+                // If values are the same or only one exists, show just one (prefer AED if available)
+                return `<span style="font-weight: 600;">${aedAmount || originalAmount}</span>`;
             };
             
             const hasDualCurrency = item.original_currency && item.original_currency !== 'AED';
