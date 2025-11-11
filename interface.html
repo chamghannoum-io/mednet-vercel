@@ -2005,13 +2005,36 @@
             // Medical Information Section
             const medicalSection = document.createElement('div');
             medicalSection.className = 'case-summary-section';
+            
+            // Map claim types to benefit types
+            const mapClaimTypeToBenefitType = (claimType) => {
+                if (!claimType) return '';
+                const type = claimType.toUpperCase();
+                const mappings = {
+                    'CONSULTATION': 'Outpatient',
+                    'LABORATORY': 'Outpatient',
+                    'MEDICAL': 'Outpatient',
+                    'RADIOLOGY': 'Outpatient',
+                    'OPTICAL': 'Optical',
+                    'DENTAL': 'Dental',
+                    'DISCHARGE_SUMMARY': 'Inpatient',
+                    'HOSPITAL_FINAL_BILL': 'Inpatient',
+                    'ALTERNATIVE_MEDICINE': 'Alternative Treatment',
+                    'HEALTH_CHECKUP': 'Wellness',
+                    'REPATRIATION': 'Additional Benefits'
+                };
+                return mappings[type] || claimType.replace(/_/g, ' ');
+            };
+            
+            const benefitType = mapClaimTypeToBenefitType(item.claim_type);
+            
             medicalSection.innerHTML = `
                 <h3 class="case-summary-title">Medical Information</h3>
                 <div class="case-summary-grid">
                     ${item.diagnosis ? `<div class="case-summary-item" style="grid-column: 1 / -1;"><div class="case-summary-label">Diagnosis</div><div class="case-summary-value">${item.diagnosis}</div></div>` : ''}
                     ${item.provider ? `<div class="case-summary-item"><div class="case-summary-label">Provider</div><div class="case-summary-value">${item.provider}</div></div>` : ''}
                     ${item.physician_name ? `<div class="case-summary-item"><div class="case-summary-label">Physician Name</div><div class="case-summary-value">${item.physician_name}</div></div>` : ''}
-                    ${item.claim_type ? `<div class="case-summary-item"><div class="case-summary-label">Claim Type</div><div class="case-summary-value highlight">${item.claim_type.toLowerCase() === 'consultation' ? 'Outpatient' : item.claim_type.replace(/_/g, ' ')}</div></div>` : ''}
+                    ${item.claim_type ? `<div class="case-summary-item"><div class="case-summary-label">Benefit Type</div><div class="case-summary-value highlight">${benefitType}</div></div>` : ''}
                 </div>
             `;
             container.appendChild(medicalSection);
