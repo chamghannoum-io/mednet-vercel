@@ -15,5 +15,5 @@ const CONFIG = {
     
     // Required fields validation
     REQUIRED_FIELDS: ['claimed_amount'],
-    EITHER_OR_FIELDS: ['receipt_number', 'invoice_number']
+    EITHER_OR_FIELDS: []
 };

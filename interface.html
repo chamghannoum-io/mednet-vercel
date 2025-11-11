@@ -1111,7 +1111,6 @@
             <div class="success-message" id="successMessage"></div>
             
             <div class="action-buttons">
-                <button class="btn" onclick="saveChanges(event)">Save Changes</button>
                 <button class="btn btn-secondary" onclick="exportJSON()">Export JSON</button>
                 <button class="btn btn-secondary" onclick="processAnother()">Process Another Document</button>
             </div>
@@ -1865,17 +1864,37 @@
                             key !== 'base64_image' &&
                             key !== 'coverage_status' &&
                             key !== 'covered_amount' &&
+                            key !== 'covered_amount_original' &&
+                            key !== 'covered_amount_aed' &&
                             key !== 'patient_responsibility' &&
                             key !== 'within_benefit_limit' &&
                             key !== 'geographical_coverage' &&
+                            key !== 'geographically_covered' &&
                             key !== 'coverage_issues' &&
                             key !== 'benefit_limit' &&
+                            key !== 'benefit_limit_original' &&
+                            key !== 'benefit_limit_aed' &&
                             key !== 'excess_amount' &&
                             key !== 'copay_percentage' &&
                             key !== 'copay_cap' &&
                             key !== 'copay_amount' &&
+                            key !== 'copay_amount_original' &&
+                            key !== 'copay_amount_aed' &&
                             key !== 'deductible' &&
-                            key !== 'max_sessions') {
+                            key !== 'max_sessions' &&
+                            key !== 'original_currency' &&
+                            key !== 'conversion_rate' &&
+                            key !== 'conversion_formula' &&
+                            key !== 'claimed_amount_original' &&
+                            key !== 'claimed_amount_aed' &&
+                            key !== 'reimbursement_amount_original' &&
+                            key !== 'reimbursement_amount_aed' &&
+                            key !== 'approval_status' &&
+                            key !== 'can_be_approved' &&
+                            key !== 'rejection_reasons' &&
+                            key !== 'claim_decision' &&
+                            key !== 'all_required_docs_present' &&
+                            key !== 'missing_documents') {
                             cleaned[key] = record[key];
                         }
                     });
@@ -1992,7 +2011,7 @@
                     ${item.diagnosis ? `<div class="case-summary-item" style="grid-column: 1 / -1;"><div class="case-summary-label">Diagnosis</div><div class="case-summary-value">${item.diagnosis}</div></div>` : ''}
                     ${item.provider ? `<div class="case-summary-item"><div class="case-summary-label">Provider</div><div class="case-summary-value">${item.provider}</div></div>` : ''}
                     ${item.physician_name ? `<div class="case-summary-item"><div class="case-summary-label">Physician Name</div><div class="case-summary-value">${item.physician_name}</div></div>` : ''}
-                    ${item.claim_type ? `<div class="case-summary-item"><div class="case-summary-label">Claim Type</div><div class="case-summary-value highlight">${item.claim_type.replace(/_/g, ' ')}</div></div>` : ''}
+                    ${item.claim_type ? `<div class="case-summary-item"><div class="case-summary-label">Claim Type</div><div class="case-summary-value highlight">${item.claim_type.toLowerCase() === 'consultation' ? 'Outpatient' : item.claim_type.replace(/_/g, ' ')}</div></div>` : ''}
                 </div>
             `;
             container.appendChild(medicalSection);
@@ -2055,8 +2074,8 @@
                     ${item.coverage_status ? `<div class="case-summary-item"><div class="case-summary-label">Coverage Status</div><div class="case-summary-value"><span class="coverage-badge ${coverageBadgeClass}">${item.coverage_status.replace(/_/g, ' ')}</span></div></div>` : ''}
                     ${item.within_benefit_limit !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Within Benefit Limit</div><div class="case-summary-value ${item.within_benefit_limit ? 'success' : 'error'}">${item.within_benefit_limit ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
                     ${item.geographical_coverage !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Geographical Coverage</div><div class="case-summary-value ${item.geographical_coverage ? 'success' : 'error'}">${item.geographical_coverage ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
+                    ${item.geographically_covered !== undefined ? `<div class="case-summary-item"><div class="case-summary-label">Geographically Covered</div><div class="case-summary-value ${item.geographically_covered ? 'success' : 'error'}">${item.geographically_covered ? 'Yes ✓' : 'No ✕'}</div></div>` : ''}
                     ${item.max_sessions && item.max_sessions !== 'N/A' ? `<div class="case-summary-item"><div class="case-summary-label">Max Sessions</div><div class="case-summary-value">${item.max_sessions}</div></div>` : ''}
-                    ${item.benefit_limit ? `<div class="case-summary-item"><div class="case-summary-label">Benefit Limit</div><div class="case-summary-value highlight">${isNaN(item.benefit_limit) ? item.benefit_limit : (item.currency || '') + ' ' + item.benefit_limit}</div></div>` : ''}
                 </div>
             `;
             container.appendChild(coverageSection);
@@ -2064,47 +2083,73 @@
             // Financial Summary Section
             const financialSection = document.createElement('div');
             financialSection.className = 'financial-summary';
-            const currency = 'AED'; // Always display in AED (values converted in n8n)
+            
+            // Helper function to format dual currency display
+            const formatDualCurrency = (originalAmount, aedAmount) => {
+                if (!originalAmount && !aedAmount) return '';
+                if (originalAmount && aedAmount && originalAmount !== aedAmount) {
+                    return `<span style="font-weight: 600;">${originalAmount}</span> <span style="color: #888; font-size: 14px;">≈</span> <span style="font-weight: 600; color: #16b1b5;">${aedAmount}</span>`;
+                }
+                // If only one currency or they're the same, just show what we have
+                return `<span style="font-weight: 600;">${originalAmount || aedAmount}</span>`;
+            };
+            
+            const hasDualCurrency = item.original_currency && item.original_currency !== 'AED';
+            
             financialSection.innerHTML = `
                 <h3 class="case-summary-title" style="border-color: #16b1b5;">Financial Breakdown</h3>
+                
                 <div class="financial-row">
                     <span class="financial-label">Claimed Amount:</span>
-                    <span class="financial-value">${currency} ${item.claimed_amount || '0.00'}</span>
+                    <span class="financial-value">${formatDualCurrency(item.claimed_amount_original, item.claimed_amount_aed)}</span>
                 </div>
+                
+                ${(item.benefit_limit_original || item.benefit_limit_aed) ? `
+                    <div class="financial-row">
+                        <span class="financial-label">Benefit Limit:</span>
+                        <span class="financial-value">${formatDualCurrency(item.benefit_limit_original, item.benefit_limit_aed)}</span>
+                    </div>
+                ` : ''}
+                
                 ${item.excess_amount ? `
                     <div class="financial-row">
                         <span class="financial-label">Excess Amount:</span>
-                        <span class="financial-value">${currency} ${item.excess_amount}</span>
+                        <span class="financial-value">AED ${item.excess_amount}</span>
                     </div>
                 ` : ''}
+                
                 ${item.deductible !== undefined ? `
                     <div class="financial-row">
                         <span class="financial-label">Deductible:</span>
-                        <span class="financial-value">${currency} ${item.deductible}</span>
+                        <span class="financial-value">AED ${item.deductible}</span>
                     </div>
                 ` : ''}
+                
                 ${item.copay_percentage ? `
                     <div class="financial-row">
                         <span class="financial-label">Co-pay Percentage:</span>
-                        <span class="financial-value">${item.copay_percentage}% ${item.copay_cap ? `(Cap: ${item.copay_cap})` : ''}</span>
+                        <span class="financial-value">${item.copay_percentage}% ${item.copay_cap ? `(Cap: AED ${item.copay_cap})` : ''}</span>
                     </div>
                 ` : ''}
-                ${item.copay_amount ? `
-                    <div class="financial-row">
-                        <span class="financial-label">Co-pay Amount:</span>
-                        <span class="financial-value">${currency} ${item.copay_amount}</span>
-                    </div>
-                ` : ''}
-                ${item.covered_amount !== undefined ? `
+                
+                ${(item.covered_amount_original || item.covered_amount_aed) ? `
                     <div class="financial-row">
                         <span class="financial-label">Covered Amount:</span>
-                        <span class="financial-value" style="color: #4caf50;">${currency} ${item.covered_amount}</span>
+                        <span class="financial-value" style="color: #4caf50;">${formatDualCurrency(item.covered_amount_original, item.covered_amount_aed)}</span>
                     </div>
                 ` : ''}
+                
                 ${item.patient_responsibility ? `
                     <div class="financial-row">
                         <span class="financial-label">Patient Share:</span>
-                        <span class="financial-value" style="color: #16b1b5; font-size: 20px;">${currency} ${item.patient_responsibility}</span>
+                        <span class="financial-value" style="color: #16b1b5; font-size: 20px;">AED ${item.patient_responsibility}</span>
+                    </div>
+                ` : ''}
+                
+                ${(item.copay_amount_original || item.copay_amount_aed) ? `
+                    <div class="financial-row" style="border-top: 2px solid #16b1b5; padding-top: 15px; margin-top: 10px;">
+                        <span class="financial-label" style="font-size: 18px; font-weight: 600;">Co-pay Amount:</span>
+                        <span class="financial-value" style="font-size: 20px; font-weight: bold; color: #16b1b5;">${formatDualCurrency(item.copay_amount_original, item.copay_amount_aed)}</span>
                     </div>
                 ` : ''}
             `;
@@ -2424,10 +2469,6 @@
                         }
                     }
                     
-                    if (EITHER_OR_FIELDS.includes(key)) {
-                        input.placeholder = 'Receipt or Invoice Number required';
-                    }
-                    
                     input.addEventListener('input', (e) => {
                         processedData[recordIndex][key] = e.target.value;
                         
@@ -2437,10 +2478,6 @@
                             } else {
                                 e.target.classList.remove('input-error');
                             }
-                        }
-                        
-                        if (EITHER_OR_FIELDS.includes(key)) {
-                            validateEitherOrFields(recordIndex);
                         }
                     });
                     
@@ -2484,24 +2521,6 @@
                 row.appendChild(imageCell);
         }
 
-        function validateEitherOrFields(recordIndex) {
-            const hasAtLeastOne = EITHER_OR_FIELDS.some(key => {
-                const value = processedData[recordIndex][key];
-                return value && String(value).trim() !== '';
-            });
-
-            EITHER_OR_FIELDS.forEach(key => {
-                const inputEl = document.getElementById(`field-${recordIndex}-${key}`);
-                if (inputEl) {
-                    if (hasAtLeastOne) {
-                        inputEl.classList.remove('input-error');
-                    } else {
-                        inputEl.classList.add('input-error');
-                    }
-                }
-            });
-        }
-
         function validateRequiredFields() {
             let hasError = false;
             const missingMessages = [];
@@ -2529,24 +2548,6 @@
                         }
                     }
                 });
-
-                const hasEitherOrField = EITHER_OR_FIELDS.some(key => {
-                    const value = record[key];
-                    return value && String(value).trim() !== '';
-                });
-
-                if (!hasEitherOrField) {
-                    hasError = true;
-                    EITHER_OR_FIELDS.forEach(key => {
-                        const inputEl = document.getElementById(`field-${recordIndex}-${key}`);
-                        if (inputEl) {
-                            inputEl.classList.add('input-error');
-                        }
-                    });
-                    if (!missingMessages.includes('Either Receipt Number or Invoice Number is required.')) {
-                        missingMessages.push('Either Receipt Number or Invoice Number is required.');
-                    }
-                }
             });
 
             if (hasError) {
