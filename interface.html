@@ -2194,12 +2194,26 @@
                     </div>
                 ` : ''}
                 
-                ${(item.copay_amount_original || item.copay_amount_aed) ? `
-                    <div class="financial-row" style="border-top: 2px solid #16b1b5; padding-top: 15px; margin-top: 10px;">
-                        <span class="financial-label" style="font-size: 18px; font-weight: 600;">Co-pay Amount:</span>
-                        <span class="financial-value" style="font-size: 20px; font-weight: bold; color: #16b1b5;">${formatDualCurrency(item.copay_amount_original, item.copay_amount_aed)}</span>
-                    </div>
-                ` : ''}
+                ${(item.copay_amount_original !== undefined || item.copay_amount_aed !== undefined) ? (() => {
+                    // Check if copay is zero
+                    const getNumericValue = (str) => {
+                        if (!str) return 0;
+                        const match = String(str).match(/[\d,]+\.?\d*/);
+                        return match ? parseFloat(match[0].replace(/,/g, '')) : 0;
+                    };
+                    const copayValue = getNumericValue(item.copay_amount_aed) || getNumericValue(item.copay_amount_original);
+                    const isZero = copayValue === 0;
+                    
+                    return `
+                        <div class="financial-row" style="border-top: 2px solid #16b1b5; padding-top: 15px; margin-top: 10px;">
+                            <span class="financial-label" style="font-size: 18px; font-weight: 600;">Co-pay Amount:</span>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                <span class="financial-value" style="font-size: 20px; font-weight: bold; color: ${isZero ? '#4caf50' : '#16b1b5'};">${formatDualCurrency(item.copay_amount_original, item.copay_amount_aed)}</span>
+                                ${isZero ? '<span style="font-size: 13px; color: #4caf50; margin-top: 4px; font-weight: 500;">Member is fully covered for this benefit</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                })() : ''}
             `;
             container.appendChild(financialSection);
             
